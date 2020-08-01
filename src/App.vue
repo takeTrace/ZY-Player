@@ -16,6 +16,7 @@
     </transition>
   </div>
 </template>
+
 <script>
 export default {
   name: 'App',
@@ -34,18 +35,21 @@ export default {
     share () {
       return this.$store.getters.getShare
     },
-    theme () {
-      return this.$store.getters.getTheme
+    setting () {
+      return this.$store.getters.getSetting
     }
   },
   watch: {
-    theme () {
-      this.changeTheme()
+    setting: {
+      handler () {
+        this.changeSetting()
+      },
+      deep: true
     }
   },
   methods: {
-    changeTheme () {
-      this.appTheme = `theme-${this.theme}`
+    changeSetting () {
+      this.appTheme = `theme-${this.setting.theme}`
     }
   }
 }
@@ -55,7 +59,7 @@ export default {
 @import './assets/scss/theme.scss';
 html, body, #app{
   height: 100%;
-  border-radius: 6px;
+  border-radius: 0px;
 }
 #app {
   font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', SimSun, sans-serif;
