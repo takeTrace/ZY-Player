@@ -6,6 +6,7 @@
       <Film v-show="view === 'Film'" />
       <Play v-show="view === 'Play'" />
       <Star v-show="view === 'Star'" />
+      <History v-show="view === 'History'" />
       <Setting v-show="view === 'Setting'" />
     </div>
     <transition name="slide">
