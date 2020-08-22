@@ -44,10 +44,10 @@
           </div>
         </div>
       </div>
-      <div class='site'>
+      <div class='search'>
          <div class="title">搜索</div>
          <div class="zy-checkbox">
-           <input type="checkbox" v-model="setting.searchAllSites"> 搜索所有资源
+           <input type="checkbox" v-model="setting.searchAllSites" @change="updateSearchOption($event)"> 搜索所有资源
          </div>
       </div>
       <div class="site">
@@ -200,6 +200,12 @@ export default {
         this.show.site = false
       })
     },
+    updateSearchOption (e) {
+      this.d.searchAllSites = this.setting.searchAllSites
+      setting.update(this.d).then(res => {
+        this.setting = this.d
+      })
+    },
     expSites () {
       const arr = [...this.sitesList]
       const str = JSON.stringify(arr)
@@ -320,6 +326,11 @@ export default {
         margin-right: 20px;
       }
     }
+  }
+  .search{
+    width: 100%;
+    padding: 20px;
+    margin-top: 20px;
   }
   .site{
     width: 100%;
