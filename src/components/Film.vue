@@ -9,7 +9,7 @@
           </ul>
         </div>
       </div>
-      <div class="zy-select" @mouseleave="show.classList = false" v-if="show.class">
+      <div class="zy-select" @mouseleave="show.classList = false" v-show="show.class">
         <div class="vs-placeholder" @click="show.classList = true">{{type.name}}</div>
         <div class="vs-options" v-show="show.classList">
           <ul class="zy-scroll" style="max-height: 600px;">
@@ -81,12 +81,11 @@
       <div class="body-box" v-show="show.find">
         <div class="show-table">
           <div class="zy-table">
-            <div class="tBody">
+            <div class="tBody zy-scroll">
               <ul>
                 <li v-for="(i, j) in searchContents" :key="j" @click="detailEvent(i.site, i)">
                   <span class="name">{{i.name}}</span>
                   <span class="type">{{i.type}}</span>
-                  <span class="time">{{i.year}}</span>
                   <span class="last">{{i.last}}</span>
                   <span class="site">{{i.site.name}}</span>
                   <span class="note">{{i.note}}</span>
