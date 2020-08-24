@@ -44,6 +44,17 @@
           </div>
         </div>
       </div>
+      <div class='site'>
+         <div class="title">收藏管理</div>
+         <div class="site-box">
+            <div class="zy-select">
+              <div class="vs-placeholder vs-noAfter" @click="exportFavorites">导出</div>
+            </div>
+            <div class="zy-select">
+              <div class="vs-placeholder vs-noAfter" @click="importFavorites">导入</div>
+            </div>
+          </div>
+      </div>
       <div class='search'>
          <div class="title">搜索</div>
          <div class="zy-checkbox">
@@ -121,9 +132,10 @@
 <script>
 import { mapMutations } from 'vuex'
 import pkg from '../../package.json'
-import { setting, sites, shortcut } from '../lib/dexie'
+import { setting, sites, shortcut, star } from '../lib/dexie'
 import { shell, clipboard, remote } from 'electron'
 import db from '../lib/dexie/dexie'
+import fs from 'fs'
 export default {
   name: 'setting',
   data () {
@@ -131,6 +143,7 @@ export default {
       pkg: pkg,
       sitesList: [],
       shortcutList: [],
+      favoritesList: [],
       show: {
         site: false,
         shortcut: false,
@@ -184,6 +197,11 @@ export default {
         this.shortcutList = res
       })
     },
+    getFavorites () {
+      star.all().then(res => {
+        this.favoritesList = res
+      })
+    },
     changeView (e) {
       this.d.view = e
       setting.update(this.d).then(res => {
@@ -204,6 +222,50 @@ export default {
       this.d.searchAllSites = this.setting.searchAllSites
       setting.update(this.d).then(res => {
         this.setting = this.d
+      })
+    },
+    exportFavorites () {
+      const arr = [...this.favoritesList]
+      const str = JSON.stringify(arr)
+      clipboard.writeText(str)
+      const options = {
+        filters: [
+          { name: 'JSON file', extensions: ['json'] },
+          { name: 'Normal text file', extensions: ['txt'] },
+          { name: 'All types', extensions: ['*'] }
+        ]
+      }
+      remote.dialog.showSaveDialog(options).then(result => {
+        if (!result.canceled) {
+          fs.writeFileSync(result.filePath, str)
+          this.$message.success('已保存成功')
+        }
+      }).catch(err => {
+        this.$message.error(err)
+      })
+    },
+    importFavorites () {
+      const options = {
+        filters: [
+          { name: 'JSON file', extensions: ['json'] },
+          { name: 'Normal text file', extensions: ['txt'] },
+          { name: 'All types', extensions: ['*'] }
+        ],
+        properties: ['openFile', 'multiSelections']
+      }
+      remote.dialog.showOpenDialog(options).then(result => {
+        if (!result.canceled) {
+          result.filePaths.forEach(file => {
+            var str = fs.readFileSync(file)
+            const json = JSON.parse(str)
+            star.bulkAdd(json).then(e => {
+              this.getFavorites()
+            })
+          })
+          this.$message.success('导入收藏成功')
+        }
+      }).catch(err => {
+        this.$message.error(err)
       })
     },
     expSites () {
@@ -280,6 +342,7 @@ export default {
     this.getSetting()
     this.getSites()
     this.getShortcut()
+    this.getFavorites()
   }
 }
 </script>
