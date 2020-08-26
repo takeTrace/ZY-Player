@@ -61,6 +61,14 @@
            <input type="checkbox" v-model="setting.searchAllSites" @change="updateSearchOption($event)"> 搜索所有资源
          </div>
       </div>
+      <div class='site'>
+         <div class="title">第三方播放器</div>
+         <div class="site-box">
+            <div class="zy-select">
+              <div class="vs-placeholder vs-noAfter" @click="selectExternalPlayer">选择</div>
+            </div>
+          </div>
+      </div>
       <div class="site">
         <div class="title">源管理</div>
         <div class="site-box">
@@ -155,7 +163,8 @@ export default {
         theme: '',
         shortcut: true,
         searchAllSites: true,
-        view: 'picture'
+        view: 'picture',
+        externalPlayer: ''
       }
     }
   },
@@ -182,7 +191,8 @@ export default {
           theme: res.theme,
           shortcut: res.shortcut,
           view: res.view,
-          searchAllSites: res.searchAllSites
+          searchAllSites: res.searchAllSites,
+          externalPlayer: res.externalPlayer
         }
         this.setting = this.d
       })
@@ -226,8 +236,7 @@ export default {
     },
     exportFavorites () {
       const arr = [...this.favoritesList]
-      const str = JSON.stringify(arr)
-      clipboard.writeText(str)
+      const str = JSON.stringify(arr, null, 4)
       const options = {
         filters: [
           { name: 'JSON file', extensions: ['json'] },
@@ -268,25 +277,74 @@ export default {
         this.$message.error(err)
       })
     },
-    expSites () {
-      const arr = [...this.sitesList]
-      const str = JSON.stringify(arr)
-      clipboard.writeText(str)
-      this.$message.success('已复制到剪贴板')
-    },
-    impSites () {
-      const str = clipboard.readText()
-      const json = JSON.parse(str)
-      sites.clear().then(res => {
-        this.$message.info('已清空原数据')
-        sites.add(json).then(e => {
-          this.$message.success('已添加成功')
-          this.getSites()
-          this.d.site = json[0].key
+    selectExternalPlayer () {
+      const options = {
+        filters: [
+          { name: 'Executable file', extensions: ['exe'] },
+          { name: 'All types', extensions: ['*'] }
+        ],
+        properties: ['openFile']
+      }
+      remote.dialog.showOpenDialog(options).then(result => {
+        if (!result.canceled) {
+          var playerPath = result.filePaths[0].replace(/\\/g, '/')
+          this.$message.success(result.filePaths[0])
+          this.$message.success('设定第三方播放器路径为：' + result.filePaths[0])
+          this.d.externalPlayer = playerPath
           setting.update(this.d).then(res => {
             this.setting = this.d
           })
-        })
+        }
+      }).catch(err => {
+        this.$message.error(err)
+      })
+    },
+    expSites () {
+      const arr = [...this.sitesList]
+      const str = JSON.stringify(arr, null, 4)
+      const options = {
+        filters: [
+          { name: 'JSON file', extensions: ['json'] },
+          { name: 'Normal text file', extensions: ['txt'] },
+          { name: 'All types', extensions: ['*'] }
+        ]
+      }
+      remote.dialog.showSaveDialog(options).then(result => {
+        if (!result.canceled) {
+          fs.writeFileSync(result.filePath, str)
+          this.$message.success('已保存成功')
+        }
+      }).catch(err => {
+        this.$message.error(err)
+      })
+    },
+    impSites () {
+      const options = {
+        filters: [
+          { name: 'JSON file', extensions: ['json'] },
+          { name: 'Normal text file', extensions: ['txt'] },
+          { name: 'All types', extensions: ['*'] }
+        ],
+        properties: ['openFile']
+      }
+      remote.dialog.showOpenDialog(options).then(result => {
+        if (!result.canceled) {
+          sites.clear()
+          result.filePaths.forEach(file => {
+            var str = fs.readFileSync(file)
+            const json = JSON.parse(str)
+            sites.add(json).then(e => {
+              this.getSites()
+              this.d.site = json[0].key
+              setting.update(this.d).then(res => {
+                this.setting = this.d
+              })
+            })
+            this.$message.success('导入成功')
+          }).catch(err => {
+            this.$message.error(err)
+          })
+        }
       })
     },
     changeTheme (e) {
