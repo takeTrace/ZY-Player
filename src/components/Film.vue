@@ -49,6 +49,7 @@
                 <div class="name" @click="detailEvent(site, props.data)">{{props.data.name}}</div>
                 <div class="info">
                   <span>{{props.data.year}}</span>
+                  <span>{{props.data.note}}</span>
                   <span>{{props.data.type}}</span>
                 </div>
               </div>
@@ -64,6 +65,7 @@
                   <span class="name">{{i.name}}</span>
                   <span class="type">{{i.type}}</span>
                   <span class="time">{{i.year}}</span>
+                  <span class="time">{{i.note}}</span>
                   <span class="last">{{i.last}}</span>
                   <span class="operate">
                     <span class="btn" @click.stop="playEvent(site, i)">播放</span>
@@ -226,10 +228,11 @@ export default {
       return new Promise((resolve, reject) => {
         const key = this.site.key
         zy.class(key).then(res => {
-          this.classList = res.class
+          var allClass = [{ name: '最新', tid: 0 }].concat(res.class)
+          this.classList = allClass
           this.show.class = true
           this.pagecount = res.pagecount
-          this.type = { name: '最新', tid: 0 }
+          this.type = this.classList[0]
           resolve(true)
         }).catch(err => {
           reject(err)
@@ -265,7 +268,8 @@ export default {
             $state.complete()
           }
           if (type === '[object Array]') {
-            this.list.push(...res)
+            // zy.list 返回的是按时间从旧到新排列, 我门需要翻转为从新到旧
+            this.list.push(...res.reverse())
           }
           if (type === '[object Object]') {
             this.list.push(res)
@@ -301,7 +305,6 @@ export default {
         } else {
           const docs = {
             key: site.key,
-            site: site,
             ids: e.id,
             name: e.name,
             type: e.type,
@@ -326,7 +329,7 @@ export default {
     },
     downloadEvent (site, e) {
       zy.download(site.key, e.id).then(res => {
-        if (res.length > 0) {
+        if (res && res.length > 0 && res.dl && res.dl.dd) {
           const text = res.dl.dd._t
           if (text) {
             const list = text.split('#')

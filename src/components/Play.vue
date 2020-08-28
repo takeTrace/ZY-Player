@@ -471,9 +471,8 @@ export default {
         if (res) {
           this.$message.info('已存在')
         } else {
-          const docs = {
+          const doc = {
             key: this.video.key,
-            site: this.video.site,
             ids: info.id,
             name: info.name,
             type: info.type,
@@ -481,7 +480,7 @@ export default {
             last: info.last,
             note: info.note
           }
-          star.add(docs).then(res => {
+          star.add(doc).then(starRes => {
             this.$message.success('收藏成功')
             this.isStar = true
           })
@@ -555,7 +554,7 @@ export default {
       })
     },
     checkStar () {
-      star.find({ site: this.video.key, ids: this.video.info.id }).then(res => {
+      star.find({ key: this.video.key, ids: this.video.info.id }).then(res => {
         if (res) {
           this.isStar = true
         } else {

@@ -53,6 +53,9 @@
             <div class="zy-select">
               <div class="vs-placeholder vs-noAfter" @click="importFavorites">导入</div>
             </div>
+            <div class="zy-select">
+              <div class="vs-placeholder vs-noAfter" @click="clearFavorites">清空收藏</div>
+            </div>
           </div>
       </div>
       <div class='search'>
@@ -235,6 +238,7 @@ export default {
       })
     },
     exportFavorites () {
+      this.getFavorites()
       const arr = [...this.favoritesList]
       const str = JSON.stringify(arr, null, 4)
       const options = {
@@ -270,11 +274,39 @@ export default {
             star.bulkAdd(json).then(e => {
               this.getFavorites()
             })
+            this.upgradeFavorites()
           })
           this.$message.success('导入收藏成功')
         }
       }).catch(err => {
         this.$message.error(err)
+      })
+    },
+    clearFavorites () {
+      star.clear().then(e => {
+        this.getFavorites()
+        this.$message.success('清空所有收藏成功')
+      })
+    },
+    upgradeFavorites () {
+      star.all().then(res => {
+        res.forEach(element => {
+          const docs = {
+            key: element.key,
+            ids: element.ids,
+            name: element.name,
+            type: element.type,
+            year: element.year,
+            last: element.last,
+            note: element.note
+          }
+          star.find({ key: element.key, ids: element.ids }).then(res => {
+            if (!res) {
+              star.add(docs)
+            }
+          })
+        })
+        this.getFavorites()
       })
     },
     selectExternalPlayer () {
@@ -300,6 +332,7 @@ export default {
       })
     },
     expSites () {
+      this.getSites()
       const arr = [...this.sitesList]
       const str = JSON.stringify(arr, null, 4)
       const options = {
@@ -363,7 +396,7 @@ export default {
     },
     expShortcut () {
       const arr = [...this.shortcutList]
-      const str = JSON.stringify(arr)
+      const str = JSON.stringify(arr, null, 4)
       clipboard.writeText(str)
       this.$message.success('已复制到剪贴板')
     },
