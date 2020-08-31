@@ -25,6 +25,7 @@
             <div class="year" v-show="info.year">上映: {{info.year}}</div>
             <div class="last" v-show="info.last">更新: {{info.last}}</div>
             <div class="note" v-show="info.note">备注: {{info.note}}</div>
+            <div class="rate" v-show="info.rate">豆瓣评分: {{info.rate}}</div>
           </div>
         </div>
         <div class="operate">
@@ -32,6 +33,7 @@
           <span @click="starEvent">收藏</span>
           <span @click="downloadEvent">下载</span>
           <span @click="shareEvent">分享</span>
+          <span @click="doubanLinkEvent">豆瓣</span>
         </div>
         <div class="desc" v-show="info.des">{{info.des}}</div>
         <div class="m3u8">
@@ -189,12 +191,72 @@ export default {
         info: this.detail.info
       }
     },
+    doubanLinkEvent () {
+      const open = require('open')
+      const axios = require('axios')
+      const cheerio = require('cheerio')
+      const name = this.detail.info.name.trim()
+      // 豆瓣搜索链接
+      var doubanSearchLink = 'https://www.douban.com/search?q=' + name
+      var link = doubanSearchLink
+      axios.get(doubanSearchLink).then(res => {
+        const $ = cheerio.load(res.data)
+        // 比较第一和第二豆瓣搜索结果, 如果名字相符， 就打开该链接，否则打开搜索页面
+        var nameInDouban = $($('div.result')[0]).find('div>div>h3>a').first()
+        if (name.replace(/\s/g, '') === nameInDouban.text().replace(/\s/g, '')) {
+          link = nameInDouban.attr('href')
+        } else {
+          nameInDouban = $($('div.result')[1]).find('div>div>h3>a').first()
+          if (name.replace(/\s/g, '') === nameInDouban.text().replace(/\s/g, '')) {
+            link = nameInDouban.attr('href')
+          }
+        }
+        open(link)
+      })
+    },
+    getDoubanRate () {
+      const axios = require('axios')
+      const cheerio = require('cheerio')
+      const name = this.detail.info.name.trim()
+      // 豆瓣搜索链接
+      var doubanSearchLink = 'https://www.douban.com/search?q=' + name
+      axios.get(doubanSearchLink).then(res => {
+        const $ = cheerio.load(res.data)
+        // 比较第一和第二给豆瓣搜索结果, 看名字是否相符
+        var link = ''
+        var nameInDouban = $($('div.result')[0]).find('div>div>h3>a').first()
+        if (name.replace(/\s/g, '') === nameInDouban.text().replace(/\s/g, '')) {
+          link = nameInDouban.attr('href')
+        } else {
+          nameInDouban = $($('div.result')[1]).find('div>div>h3>a').first()
+          if (name.replace(/\s/g, '') === nameInDouban.text().replace(/\s/g, '')) {
+            link = nameInDouban.attr('href')
+          }
+        }
+        // 如果找到链接，就打开该链接获取评分
+        if (link) {
+          axios.get(link).then(response => {
+            const parsedHtml = cheerio.load(response.data)
+            var rating = parsedHtml('body').find('#interest_sectl').first().find('strong').first()
+            if (rating.text()) {
+              this.info.rate = rating.text()
+            } else {
+              this.info.rate = '暂无评分'
+            }
+          })
+        } else {
+          this.info.rate = '暂无评分'
+        }
+      })
+    },
     getDetailInfo () {
       const id = this.detail.info.ids || this.detail.info.id
       zy.detail(this.detail.key, id).then(res => {
         if (res) {
           this.info = res
+          this.$set(this.info, 'rate', '')
           this.m3u8Parse(res)
+          this.getDoubanRate()
           this.loading = false
         }
       })
@@ -208,9 +270,10 @@ export default {
 <style lang="scss" scoped>
 .detail{
   position: absolute;
-  left: 60px;
+  left: 80px;
+  right: 20px;
   bottom: 0;
-  width: 100%;
+  width: calc(100% - 100px);
   height: calc(100% - 40px);
   z-index: 888;
   .detail-content{
@@ -264,6 +327,11 @@ export default {
         .director, .actor, .type, .area, .lang, .year, .last, .note{
           font-size: 14px;
           line-height: 26px;
+        }
+        .rate{
+          font-size: 16px;
+          line-height: 26px;
+          font-weight: bolder;
         }
       }
     }

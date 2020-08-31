@@ -65,24 +65,19 @@
          </div>
       </div>
       <div class='site'>
-         <div class="title">第三方播放器</div>
+         <div class="title">第三方播放</div>
          <div class="site-box">
             <div class="zy-select">
-              <div class="vs-placeholder vs-noAfter" @click="selectExternalPlayer">选择</div>
+              <div class="vs-placeholder vs-noAfter" @click="selectLocalPlayer">选择本地播放器</div>
+            </div>
+            <div class="zy-select">
+              <div class="vs-placeholder vs-noAfter" @click="resetLocalPlayer">重置</div>
             </div>
           </div>
       </div>
       <div class="site">
         <div class="title">源管理</div>
         <div class="site-box">
-          <div class="zy-select" @mouseleave="show.site = false">
-            <div class="vs-placeholder" @click="show.site = true">默认源</div>
-            <div class="vs-options" v-show="show.site">
-              <ul class="zy-scroll" style="height: 300px">
-                <li :class="d.site === i.key ? 'active' : ''" v-for="(i, j) in sitesList" :key="j" @click="siteClick(i.key)">{{ i.name }}</li>
-              </ul>
-            </div>
-          </div>
           <div class="zy-select">
             <div class="vs-placeholder vs-noAfter" @click="exportSites">导出</div>
           </div>
@@ -91,6 +86,14 @@
           </div>
           <div class="zy-select">
             <div class="vs-placeholder vs-noAfter" @click="resetSites">重置源</div>
+          </div>
+          <div class="zy-select" @mouseleave="show.site = false">
+            <div class="vs-placeholder" @click="show.site = true">默认源</div>
+            <div class="vs-options" v-show="show.site">
+              <ul class="zy-scroll" style="height: 300px">
+                <li :class="d.site === i.key ? 'active' : ''" v-for="(i, j) in sitesList" :key="j" @click="siteClick(i.key)">{{ i.name }}</li>
+              </ul>
+            </div>
           </div>
           <div class="zy-select">
             <div class="vs-placeholder vs-noAfter" @click="openDoc('sites')">说明文档</div>
@@ -313,7 +316,7 @@ export default {
         this.getFavorites()
       })
     },
-    selectExternalPlayer () {
+    selectLocalPlayer () {
       const options = {
         filters: [
           { name: 'Executable file', extensions: ['exe'] },
@@ -324,7 +327,6 @@ export default {
       remote.dialog.showOpenDialog(options).then(result => {
         if (!result.canceled) {
           var playerPath = result.filePaths[0].replace(/\\/g, '/')
-          this.$message.success(result.filePaths[0])
           this.$message.success('设定第三方播放器路径为：' + result.filePaths[0])
           this.d.externalPlayer = playerPath
           setting.update(this.d).then(res => {
@@ -333,6 +335,13 @@ export default {
         }
       }).catch(err => {
         this.$message.error(err)
+      })
+    },
+    resetLocalPlayer () {
+      this.d.externalPlayer = ''
+      setting.update(this.d).then(res => {
+        this.setting = this.d
+        this.$message.success('重置第三方播放器成功')
       })
     },
     exportSites () {
