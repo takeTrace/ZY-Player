@@ -7,20 +7,40 @@
         </div>
         <div class="tBody zy-scroll">
           <ul>
-            <li v-for="(i, j) in list" :key="j" @click="detailEvent(i)" :class="[i.hasUpdate ? 'zy-highlighted': '']">
-              <span class="name">{{i.name}}</span>
-              <span class="type">{{i.type}}</span>
-              <span class="time">{{i.year}}</span>
-              <span class="site">{{getSiteName(i.key)}}</span>
-              <span class="note">{{i.note}}</span>
+            <li v-show="this.list.length > 0">
+              <span class="name">名字</span>
+              <span class="type">类型</span>
+              <span class="time">上映</span>
+              <span class="site">片源</span>
+              <span class="note">备注</span>
+              <span class="note">观看至</span>
               <span class="operate">
-                <span class="btn" @click.stop="playEvent(i)">播放</span>
-                <span class="btn" @click.stop="shareEvent(i)">分享</span>
-                <span class="btn" @click.stop="updateEvent(i)">同步</span>
-                <span class="btn" @click.stop="downloadEvent(i)">下载</span>
-                <span class="btn" @click.stop="deleteEvent(i)">删除</span>
+                <span class="btn"></span>
+                <span class="btn"></span>
+                <span class="btn"></span>
+                <span class="btn"></span>
+                <span class="btn"></span>
               </span>
             </li>
+            <draggable v-model="list" @change="listUpdatedEvent">
+              <transition-group>
+                <li v-for="(i, j) in list" :key="j" @click="detailEvent(i)" :class="[i.hasUpdate ? 'zy-highlighted': '']">
+                  <span class="name">{{i.name}}</span>
+                  <span class="type">{{i.type}}</span>
+                  <span class="time">{{i.year}}</span>
+                  <span class="site">{{getSiteName(i.key)}}</span>
+                  <span class="note">{{i.note}}</span>
+                  <span class="note">{{getHistoryNote(i.index)}}</span>
+                  <span class="operate">
+                    <span class="btn" @click.stop="playEvent(i)">播放</span>
+                     <span class="btn" @click.stop="shareEvent(i)">分享</span>
+                    <span class="btn" @click.stop="updateEvent(i)">同步</span>
+                    <span class="btn" @click.stop="downloadEvent(i)">下载</span>
+                    <span class="btn" @click.stop="deleteEvent(i)">删除</span>
+                  </span>
+                </li>
+              </transition-group>
+            </draggable>
           </ul>
         </div>
       </div>
@@ -31,6 +51,8 @@
 import { mapMutations } from 'vuex'
 import { star, history, sites } from '../lib/dexie'
 import zy from '../lib/site/tools'
+import draggable from 'vuedraggable'
+
 const { clipboard } = require('electron')
 export default {
   name: 'star',
@@ -39,6 +61,9 @@ export default {
       list: [],
       sites: []
     }
+  },
+  components: {
+    draggable
   },
   computed: {
     view: {
@@ -132,6 +157,17 @@ export default {
         this.getStarList()
       })
     },
+    listUpdatedEvent () {
+      star.clear().then(res1 => {
+        // 重新排序
+        var id = this.list.length
+        this.list.forEach(element => {
+          element.id = id
+          star.add(element)
+          id -= 1
+        })
+      })
+    },
     updateEvent (e) {
       zy.detail(e.key, e.ids).then(res => {
         var doc = {
@@ -216,6 +252,13 @@ export default {
         return site.name
       }
     },
+    getHistoryNote (index) {
+      if (index !== null && index !== undefined) {
+        return `第${index + 1}集`
+      } else {
+        return ''
+      }
+    },
     getStarList () {
       star.all().then(res => {
         this.list = res.reverse()
@@ -229,6 +272,7 @@ export default {
   },
   created () {
     this.getStarList()
+    window.Sortable = require('sortablejs').Sortable
   }
 }
 </script>
