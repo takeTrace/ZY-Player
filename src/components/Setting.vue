@@ -90,18 +90,10 @@
             <div class="vs-placeholder vs-noAfter" @click="importSites">导入</div>
           </div>
           <div class="zy-select">
-            <div class="vs-placeholder vs-noAfter" @click="resetSites">重置源</div>
-          </div>
-          <div class="zy-select" @mouseleave="show.site = false">
-            <div class="vs-placeholder" @click="show.site = true">默认源</div>
-            <div class="vs-options" v-show="show.site">
-              <ul class="zy-scroll" style="height: 300px">
-                <li :class="d.site === i.key ? 'active' : ''" v-for="(i, j) in sitesList" :key="j" @click="siteClick(i.key)">{{ i.name }}</li>
-              </ul>
-            </div>
+            <div class="vs-placeholder vs-noAfter" @click="editSitesEvent">编辑源</div>
           </div>
           <div class="zy-select">
-            <div class="vs-placeholder vs-noAfter" @click="openDoc('sites')">说明文档</div>
+            <div class="vs-placeholder vs-noAfter" @click="resetSites">重置源</div>
           </div>
         </div>
       </div>
@@ -194,10 +186,18 @@ export default {
       set (val) {
         this.SET_SETTING(val)
       }
+    },
+    editSites: {
+      get () {
+        return this.$store.getters.getEditSites
+      },
+      set (val) {
+        this.SET_EDITSITES(val)
+      }
     }
   },
   methods: {
-    ...mapMutations(['SET_SETTING']),
+    ...mapMutations(['SET_SETTING', 'SET_EDITSITES']),
     linkOpen (e) {
       shell.openExternal(e)
     },
@@ -397,7 +397,7 @@ export default {
           result.filePaths.forEach(file => {
             var str = fs.readFileSync(file)
             const json = JSON.parse(str)
-            sites.add(json).then(e => {
+            sites.bulkAdd(json).then(e => {
               this.getSites()
               this.d.site = json[0].key
               setting.update(this.d).then(res => {
@@ -411,9 +411,15 @@ export default {
         }
       })
     },
+    editSitesEvent () {
+      this.editSites = {
+        show: true,
+        sites: this.sitesList
+      }
+    },
     resetSites () {
       sites.clear()
-      sites.add(defaultSites).then(e => {
+      sites.bulkAdd(defaultSites).then(e => {
         this.getSites()
         this.d.site = defaultSites[0].key
         setting.update(this.d).then(res => {
