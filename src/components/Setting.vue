@@ -42,24 +42,16 @@
           </div>
         </div>
       </div>
-      <div class='site'>
-         <div class="title">收藏管理</div>
-         <div class="site-box">
-            <div class="zy-select">
-              <div class="vs-placeholder vs-noAfter" @click="exportFavorites">导出</div>
-            </div>
-            <div class="zy-select">
-              <div class="vs-placeholder vs-noAfter" @click="importFavorites">导入</div>
-            </div>
-            <div class="zy-select">
-              <div class="vs-placeholder vs-noAfter" @click="clearFavorites">清空收藏</div>
-            </div>
-          </div>
+      <div class="site">
+        <div class="title">定位时间设置</div>
+        <div class="zy-input">
+          左/右方向键:<input style="width:50px" type="number" v-model = "d.forwardTimeInSec" @change="updateSettingEvent($event)">秒
+        </div>
       </div>
       <div class='search'>
          <div class="title">搜索</div>
-         <div class="zy-checkbox">
-           <input type="checkbox" v-model="setting.searchAllSites" @change="updateSearchOption($event)"> 搜索所有资源
+          <div class="zy-input" @click="toggleSearchAllSites">
+            <input type="checkbox" v-model="d.searchAllSites" @change="updateSettingEvent($event)"> 搜索所有资源
          </div>
       </div>
       <div class='site'>
@@ -72,9 +64,9 @@
               <div class="vs-placeholder vs-noAfter" v-show = "editPlayerPath == false">
                 <label>编辑</label>
               </div>
-              <input class="vs-input" v-show = "editPlayerPath == true" v-model = "d.externalPlayer"
-                @blur= "updatePlayerPath"
-                @keyup.enter = "updatePlayerPath">
+              <input class="zy-input" v-show = "editPlayerPath == true" v-model = "d.externalPlayer"
+                @blur= "updateSettingEvent"
+                @keyup.enter = "updateSettingEvent">
             </div>
           </div>
       </div>
@@ -93,8 +85,8 @@
           <div class="zy-select">
             <div class="vs-placeholder vs-noAfter" @click="resetSites">重置源</div>
           </div>
-          <div class="zy-checkbox">
-           <input type="checkbox" v-model="setting.excludeR18Films" @change="updateExcludeR18FilmOption($event)"> 屏蔽福利片
+          <div class="zy-input" @click="toggleExcludeR18Films">
+           <input type="checkbox" v-model="d.excludeR18Films" @change="updateSettingEvent($event)"> 屏蔽福利片
          </div>
         </div>
       </div>
@@ -169,6 +161,7 @@ export default {
       editPlayerPath: false,
       excludeR18Films: false,
       latestVersion: pkg.version,
+      forwardTimeInSec: 5,
       d: {
         id: 0,
         site: '',
@@ -178,7 +171,8 @@ export default {
         view: 'picture',
         externalPlayer: '',
         editPlayerPath: false,
-        excludeR18Films: true
+        excludeR18Films: true,
+        forwardTimeInSec: 5
       }
     }
   },
@@ -213,10 +207,11 @@ export default {
           theme: res.theme,
           shortcut: res.shortcut,
           view: res.view,
-          searchAllSites: res.searchAllSites,
+          searchAllSites: res.searchAllSites ? res.searchAllSites : true,
           externalPlayer: res.externalPlayer,
           editPlayerPath: false,
-          excludeR18Films: res.excludeR18Films
+          excludeR18Films: res.excludeR18Films ? res.excludeR18Films : true,
+          forwardTimeInSec: res.forwardTimeInSec ? res.forwardTimeInSec : 5
         }
         this.setting = this.d
       })
@@ -252,85 +247,17 @@ export default {
         this.show.site = false
       })
     },
-    updateSearchOption (e) {
-      this.d.searchAllSites = this.setting.searchAllSites
-      setting.update(this.setting)
+    updateSettingEvent (e) {
+      this.editPlayerPath = false
+      setting.update(this.d)
     },
-    updateExcludeR18FilmOption (e) {
-      this.d.excludeR18Films = this.setting.excludeR18Films
-      setting.update(this.setting)
+    toggleSearchAllSites () {
+      this.d.searchAllSites = !this.d.searchAllSites
+      setting.update(this.d)
     },
-    exportFavorites () {
-      this.getFavorites()
-      const arr = [...this.favoritesList]
-      const str = JSON.stringify(arr, null, 4)
-      const options = {
-        filters: [
-          { name: 'JSON file', extensions: ['json'] },
-          { name: 'Normal text file', extensions: ['txt'] },
-          { name: 'All types', extensions: ['*'] }
-        ]
-      }
-      remote.dialog.showSaveDialog(options).then(result => {
-        if (!result.canceled) {
-          fs.writeFileSync(result.filePath, str)
-          this.$message.success('已保存成功')
-        }
-      }).catch(err => {
-        this.$message.error(err)
-      })
-    },
-    importFavorites () {
-      const options = {
-        filters: [
-          { name: 'JSON file', extensions: ['json'] },
-          { name: 'Normal text file', extensions: ['txt'] },
-          { name: 'All types', extensions: ['*'] }
-        ],
-        properties: ['openFile', 'multiSelections']
-      }
-      remote.dialog.showOpenDialog(options).then(result => {
-        if (!result.canceled) {
-          result.filePaths.forEach(file => {
-            var str = fs.readFileSync(file)
-            const json = JSON.parse(str)
-            star.bulkAdd(json).then(e => {
-              this.getFavorites()
-            })
-            this.upgradeFavorites()
-          })
-          this.$message.success('导入收藏成功')
-        }
-      }).catch(err => {
-        this.$message.error(err)
-      })
-    },
-    clearFavorites () {
-      star.clear().then(e => {
-        this.getFavorites()
-        this.$message.success('清空所有收藏成功')
-      })
-    },
-    upgradeFavorites () {
-      star.all().then(res => {
-        res.forEach(element => {
-          const docs = {
-            key: element.key,
-            ids: element.ids,
-            name: element.name,
-            type: element.type,
-            year: element.year,
-            last: element.last,
-            note: element.note
-          }
-          star.find({ key: element.key, ids: element.ids }).then(res => {
-            if (!res) {
-              star.add(docs)
-            }
-          })
-        })
-        this.getFavorites()
-      })
+    toggleExcludeR18Films () {
+      this.d.excludeR18Films = !this.d.excludeR18Films
+      setting.update(this.d)
     },
     selectLocalPlayer () {
       const options = {
@@ -345,7 +272,6 @@ export default {
           var playerPath = result.filePaths[0].replace(/\\/g, '/')
           this.$message.success('设定第三方播放器路径为：' + result.filePaths[0])
           this.d.externalPlayer = playerPath
-          this.externalPlayer = playerPath
           setting.update(this.d).then(res => {
             this.setting = this.d
           })

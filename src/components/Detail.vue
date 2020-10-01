@@ -34,7 +34,7 @@
           <span @click="downloadEvent">下载</span>
           <span @click="shareEvent">分享</span>
           <span @click="doubanLinkEvent">豆瓣</span>
-          <span>
+          <span @click="togglePlayOnlineEvent">
             <input type="checkbox" v-model="playOnline"> 播放在线高清视频
           </span>
           <span>
@@ -72,7 +72,7 @@ export default {
       info: {},
       playOnline: false,
       selectedOnlineSite: '哔嘀',
-      onlineSites: ['哔嘀', '素白白', '1080影视']
+      onlineSites: ['哔嘀', '素白白', '简影', '1080影视']
     }
   },
   filters: {
@@ -187,6 +187,9 @@ export default {
         this.$message.warning('收藏失败')
       })
     },
+    togglePlayOnlineEvent () {
+      this.playOnline = !this.playOnline
+    },
     playVideoOnline (videoName, videoIndex) {
       switch (this.selectedOnlineSite) {
         case '哔嘀':
@@ -197,6 +200,15 @@ export default {
           break
         case '素白白':
           onlineVideo.playVideoOnSubaibai(videoName, videoIndex)
+          break
+        case '哆咪动漫':
+          onlineVideo.playVideoOndmdm2020(videoName, videoIndex)
+          break
+        case '樱花动漫':
+          onlineVideo.playVideoOnYhdm(videoName, videoIndex)
+          break
+        case '简影':
+          onlineVideo.playVideoOnSyrme(videoName, videoIndex)
           break
         default:
           this.$message.console.error(`不支持该网站：${this.selectedOnlineSite}`)
