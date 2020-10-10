@@ -3,53 +3,41 @@
     <div class="detail-content">
       <div class="detail-header">
         <div class="zy-select">
-            <div class="vs-placeholder vs-noAfter" @click="openAddSite">添加</div>
-        </div>
-        <div class="zy-select">
           <div class="vs-placeholder vs-noAfter" @click="exportSites">导出</div>
         </div>
         <div class="zy-select">
           <div class="vs-placeholder vs-noAfter" @click="importSites">导入</div>
         </div>
         <div class="zy-select">
-          <div class="vs-placeholder vs-noAfter" @click="resetSites">重置</div>
+          <div class="vs-placeholder vs-noAfter" @click="removeAllSites">清空</div>
         </div>
         <div class="zy-select">
-          <div class="vs-input"><input v-model="searchkeyword" type="text" placeholder="搜索"></div>
+          <div class="vs-placeholder vs-noAfter" @click="resetSites">重置</div>
+        </div>
+        <div style="width: 200px; height: 30px;">
+        </div>
+      </div>
+      <div class="detail-header">
+        <div>
+          <div class="vs-placeholder vs-noAfter" @click="exportSites">总频道数:{{iptvList.length}}</div>
+        </div>
+        <div class="zy-select" @mouseleave="show.search = false">
+          <div class="vs-input" @click="show.search = true"><input v-model.trim="searchTxt" type="text" placeholder="搜索" @keyup.enter="searchEvent(searchTxt)"></div>
+          <div class="vs-options" v-show="show.search">
+            <ul class="zy-scroll" style="max-height: 600px">
+              <li v-for="(i, j) in searchList" :key="j" @click="searchEvent(i.keywords)">{{i.keywords}}</li>
+              <li v-show="searchList.length >= 1" @click="clearSearch">清空历史记录</li>
+            </ul>
+          </div>
         </div>
       </div>
       <div class="detail-body zy-scroll">
         <div class="zy-table">
           <div class="tBody zy-scroll">
-            <div class="iptv-box zy-scroll" v-show="showAddSite">
-              <ul>
-                <li >
-                  <span class="name">频道名</span>
-                  <span class="name">Url</span>
-                  <span class="operate">
-                    <span class="btn"></span>
-                    <span class="btn"></span>
-                  </span>
-                 </li>
-                 <li>
-                  <span class="name" style="display:inline-block;vertical-align:middle">
-                    <input style="height: 30px" v-model="newSite.name">
-                  </span>
-                  <span class="name" style="display:inline-block;vertical-align:middle">
-                    <input style="height: 30px" v-model="newSite.url">
-                  </span>
-                  <span class="operate">
-                    <span class="btn" @click="addNewSite">添加</span>
-                    <span class="btn" @click="closeAddSite">关闭</span>
-                  </span>
-                 </li>
-                 <li ></li>
-               </ul>
-             </div>
             <ul>
               <draggable v-model="iptvList" @change="listUpdatedEvent">
                 <transition-group>
-                  <li v-for="(i, j) in iptvList" :key="j" @click.stop="playEvent(i)" v-show="containSearchKeyword(i)">
+                  <li v-for="(i, j) in iptvList" :key="j" @click.stop="playEvent(i)" v-show="containsearchTxt(i)">
                     <span class="name">{{i.name}}</span>
                     <span class="operate">
                       <span class="btn" @click.stop="playEvent(i)">播放</span>
@@ -67,7 +55,7 @@
 </template>
 <script>
 import { mapMutations } from 'vuex'
-import { iptv } from '../lib/dexie'
+import { iptv, iptvSearch } from '../lib/dexie'
 import draggable from 'vuedraggable'
 import { iptv as defaultSites } from '../lib/dexie/initData'
 import { remote } from 'electron'
@@ -77,13 +65,11 @@ export default {
   data () {
     return {
       iptvList: [],
-      showAddSite: false,
-      newSite:
-      {
-        name: '',
-        site: ''
-      },
-      searchkeyword: ''
+      searchTxt: '',
+      searchList: [],
+      show: {
+        search: false
+      }
     }
   },
   components: {
@@ -113,17 +99,19 @@ export default {
   watch: {
     view () {
       this.getAllSites()
+    },
+    searchTxt () {
     }
   },
   methods: {
     ...mapMutations(['SET_VIEW', 'SET_DETAIL', 'SET_VIDEO', 'SET_SHARE']),
     playEvent (e) {
-      this.video = { info: { url: e.url } }
+      this.video = { iptv: { name: e.name, url: e.url } }
       this.view = 'Play'
     },
-    containSearchKeyword (i) {
-      if (this.searchkeyword) {
-        return i.name.toLowerCase().includes(this.searchkeyword.toLowerCase())
+    containsearchTxt (i) {
+      if (this.searchTxt) {
+        return i.name.toLowerCase().includes(this.searchTxt.toLowerCase())
       } else {
         return true
       }
@@ -133,30 +121,6 @@ export default {
         this.getAllSites()
       }).catch(err => {
         this.$message.warning('删除频道失败, 错误信息: ' + err)
-      })
-    },
-    closeAddSite () {
-      this.showAddSite = false
-    },
-    openAddSite () {
-      this.showAddSite = true
-    },
-    addNewSite () {
-      if (!this.newSite.name || !this.newSite.url) {
-        this.$message.error('名称和API接口不能为空。')
-        return
-      }
-      var doc = {
-        name: this.newSite.name,
-        url: this.newSite.url
-      }
-      iptv.add(doc).then(res => {
-        this.newSite = {
-          name: '',
-          url: ''
-        }
-        this.$message.success('添加新源成功！')
-        this.getAllSites()
       })
     },
     listUpdatedEvent () {
@@ -171,20 +135,27 @@ export default {
       })
     },
     exportSites () {
-      this.getAllSites()
-      const arr = [...this.iptvList]
-      const str = JSON.stringify(arr, null, 4)
       const options = {
         filters: [
-          { name: 'JSON file', extensions: ['json'] },
-          { name: 'Normal text file', extensions: ['txt'] },
-          { name: 'All types', extensions: ['*'] }
+          { name: 'm3u file', extensions: ['m3u'] },
+          { name: 'JSON file', extensions: ['json'] }
         ]
       }
       remote.dialog.showSaveDialog(options).then(result => {
         if (!result.canceled) {
-          fs.writeFileSync(result.filePath, str)
-          this.$message.success('已保存成功')
+          if (result.filePath.endsWith('m3u')) {
+            var writer = require('m3u').extendedWriter()
+            this.iptvList.forEach(e => {
+              writer.file(e.url, -1, e.name)
+            })
+            fs.writeFileSync(result.filePath, writer.toString())
+            this.$message.success('已保存成功')
+          } else {
+            const arr = [...this.iptvList]
+            const str = JSON.stringify(arr, null, 4)
+            fs.writeFileSync(result.filePath, str)
+            this.$message.success('已保存成功')
+          }
         }
       }).catch(err => {
         this.$message.error(err)
@@ -193,48 +164,34 @@ export default {
     importSites () {
       const options = {
         filters: [
-          { name: 'm3u file', extensions: ['m3u'] },
-          { name: 'JSON file', extensions: ['json'] }
+          { name: 'm3u file', extensions: ['m3u', 'm3u8'] }
         ],
-        properties: ['openFile']
+        properties: ['openFile', 'multiSelections']
       }
       remote.dialog.showOpenDialog(options).then(result => {
         if (!result.canceled) {
+          var docs = this.iptvList
           result.filePaths.forEach(file => {
-            if (file.endsWith('json')) {
-              var str = fs.readFileSync(file)
-              const json = JSON.parse(str)
-              iptv.clear().then(res => {
-                iptv.bulkAdd(json).then(e => {
-                  this.getAllSites()
-                  this.$message.success('导入成功')
-                })
-              })
-            } else if (file.endsWith('m3u')) {
-              const parser = require('iptv-playlist-parser')
-              const playlist = fs.readFileSync(file, { encoding: 'utf-8' })
-              const result = parser.parse(playlist)
-              var docs = []
-              result.items.forEach(ele => {
-                if (ele.name && ele.url && ele.url.endsWith('m3u8')) {
-                  var doc = {
-                    name: ele.name,
-                    url: ele.url
-                  }
-                  docs.push(doc)
+            const parser = require('iptv-playlist-parser')
+            const playlist = fs.readFileSync(file, { encoding: 'utf-8' })
+            const result = parser.parse(playlist)
+            result.items.forEach(ele => {
+              if (ele.name && ele.url && ele.url.includes('.m3u8')) {
+                var doc = {
+                  name: ele.name,
+                  url: ele.url
                 }
-              })
-              if (docs) {
-                iptv.clear().then(res => {
-                  iptv.bulkAdd(docs).then(e => {
-                    this.getAllSites()
-                    this.$message.success('导入成功')
-                  })
-                })
-              } else {
-                this.$message.error('m3u文件没有读取到可用源数据')
+                docs.push(doc)
               }
-            }
+            })
+          })
+          // 获取url不重复的列表
+          const uniqueList = [...new Map(docs.map(item => [item.url, item])).values()]
+          iptv.clear().then(res => {
+            iptv.bulkAdd(uniqueList).then(e => {
+              this.getAllSites()
+              this.$message.success('导入成功')
+            })
           })
         }
       })
@@ -243,17 +200,44 @@ export default {
       iptv.clear()
       iptv.bulkAdd(defaultSites).then(e => {
         this.getAllSites()
-        this.$message.success('重置成功')
+      })
+    },
+    removeAllSites () {
+      iptv.clear().then(res => {
+        this.getAllSites()
       })
     },
     getAllSites () {
       iptv.all().then(res => {
         this.iptvList = res
       })
+    },
+    getAllSearch () {
+      iptvSearch.all().then(res => {
+        this.searchList = res.reverse()
+      })
+    },
+    clearSearch () {
+      iptvSearch.clear().then(res => {
+        this.getAllSearch()
+      })
+    },
+    searchEvent (wd) {
+      this.searchTxt = wd
+      this.show.search = false
+      if (wd) {
+        iptvSearch.find({ keywords: wd }).then(res => {
+          if (!res) {
+            iptvSearch.add({ keywords: wd })
+          }
+          this.getAllSearch()
+        })
+      }
     }
   },
   created () {
     this.getAllSites()
+    this.getAllSearch()
   }
 }
 </script>
@@ -285,7 +269,7 @@ export default {
     }
   }
   .detail-body{
-    height: calc(100% - 50px);
+    height: calc(100% - 100px);
     overflow-y: auto;
   }
 }

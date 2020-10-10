@@ -45,13 +45,13 @@
       <div class="site">
         <div class="title">定位时间设置</div>
         <div class="zy-input">
-          左/右方向键:<input style="width:50px" type="number" v-model = "d.forwardTimeInSec" @change="updateSettingEvent($event)">秒
+          左/右方向键:<input style="width:50px" type="number" v-model = "d.forwardTimeInSec" @change="updateSettingEvent">秒
         </div>
       </div>
       <div class='search'>
          <div class="title">搜索</div>
           <div class="zy-input" @click="toggleSearchAllSites">
-            <input type="checkbox" v-model="d.searchAllSites" @change="updateSettingEvent($event)"> 搜索所有资源
+            <input type="checkbox" v-model = "d.searchAllSites" @change="updateSettingEvent"> 搜索所有资源
          </div>
       </div>
       <div class='site'>
@@ -74,19 +74,13 @@
         <div class="title">源管理</div>
         <div class="site-box">
           <div class="zy-select">
-            <div class="vs-placeholder vs-noAfter" @click="exportSites">导出</div>
-          </div>
-          <div class="zy-select">
-            <div class="vs-placeholder vs-noAfter" @click="importSites">导入</div>
-          </div>
-          <div class="zy-select">
             <div class="vs-placeholder vs-noAfter" @click="editSitesEvent">编辑源</div>
           </div>
-          <div class="zy-select">
-            <div class="vs-placeholder vs-noAfter" @click="resetSites">重置源</div>
+          <div class="zy-input" @click="toggleExcludeRootClasses">
+           <input type="checkbox" v-model = "d.excludeRootClasses" @change="updateSettingEvent"> 屏蔽主分类
           </div>
           <div class="zy-input" @click="toggleExcludeR18Films">
-           <input type="checkbox" v-model="d.excludeR18Films" @change="updateSettingEvent($event)"> 屏蔽福利片
+           <input type="checkbox" v-model = "d.excludeR18Films" @change="updateSettingEvent"> 屏蔽福利片
          </div>
         </div>
       </div>
@@ -143,8 +137,6 @@ import pkg from '../../package.json'
 import { setting, sites, shortcut, star } from '../lib/dexie'
 import { shell, clipboard, remote } from 'electron'
 import db from '../lib/dexie/dexie'
-import { sites as defaultSites } from '../lib/dexie/initData'
-import fs from 'fs'
 export default {
   name: 'setting',
   data () {
@@ -160,7 +152,7 @@ export default {
       },
       externalPlayer: '',
       editPlayerPath: false,
-      excludeR18Films: false,
+      excludeR18Films: true,
       latestVersion: pkg.version,
       forwardTimeInSec: 5,
       d: {
@@ -172,6 +164,7 @@ export default {
         view: 'picture',
         externalPlayer: '',
         editPlayerPath: false,
+        excludeRootClasses: true,
         excludeR18Films: true,
         forwardTimeInSec: 5
       }
@@ -204,15 +197,14 @@ export default {
       setting.find().then(res => {
         this.d = {
           id: res.id,
-          site: res.site,
           theme: res.theme,
           shortcut: res.shortcut,
           view: res.view,
-          searchAllSites: res.searchAllSites ? res.searchAllSites : true,
           externalPlayer: res.externalPlayer,
-          editPlayerPath: false,
-          excludeR18Films: res.excludeR18Films ? res.excludeR18Films : true,
-          forwardTimeInSec: res.forwardTimeInSec ? res.forwardTimeInSec : 5
+          searchAllSites: res.searchAllSites,
+          excludeRootClasses: res.excludeRootClasses,
+          excludeR18Films: res.excludeR18Films,
+          forwardTimeInSec: res.forwardTimeInSec
         }
         this.setting = this.d
       })
@@ -234,31 +226,25 @@ export default {
     },
     changeView (e) {
       this.d.view = e
-      setting.update(this.d).then(res => {
-        this.$message.success('修改成功')
-        this.show.view = false
-        this.setting = this.d
-      })
+      this.updateSettingEvent()
+      this.show.view = false
     },
-    siteClick (e) {
-      this.d.site = e
-      setting.update(this.d).then(res => {
-        this.$message.success('修改默认源成功')
-        this.setting = this.d
-        this.show.site = false
-      })
-    },
-    updateSettingEvent (e) {
+    updateSettingEvent () {
       this.editPlayerPath = false
+      this.setting = this.d
       setting.update(this.d)
     },
     toggleSearchAllSites () {
       this.d.searchAllSites = !this.d.searchAllSites
-      setting.update(this.d)
+      this.updateSettingEvent()
     },
     toggleExcludeR18Films () {
       this.d.excludeR18Films = !this.d.excludeR18Films
-      setting.update(this.d)
+      this.updateSettingEvent()
+    },
+    toggleExcludeRootClasses () {
+      this.d.excludeRootClasses = !this.d.excludeRootClasses
+      this.updateSettingEvent()
     },
     selectLocalPlayer () {
       const options = {
@@ -273,9 +259,7 @@ export default {
           var playerPath = result.filePaths[0].replace(/\\/g, '/')
           this.$message.success('设定第三方播放器路径为：' + result.filePaths[0])
           this.d.externalPlayer = playerPath
-          setting.update(this.d).then(res => {
-            this.setting = this.d
-          })
+          this.updateSettingEvent()
         }
       }).catch(err => {
         this.$message.error(err)
@@ -284,65 +268,14 @@ export default {
     resetLocalPlayer () {
       this.d.externalPlayer = ''
       setting.update(this.d).then(res => {
-        this.setting = this.d
+        this.updateSettingEvent()
         this.$message.success('重置第三方播放器成功')
       })
     },
     updatePlayerPath () {
       this.$message.success('设定第三方播放器路径为：' + this.d.externalPlayer)
       this.editPlayerPath = false
-      setting.update(this.d).then(res => {
-        this.setting = this.d
-      })
-    },
-    exportSites () {
-      this.getSites()
-      const arr = [...this.sitesList]
-      const str = JSON.stringify(arr, null, 4)
-      const options = {
-        filters: [
-          { name: 'JSON file', extensions: ['json'] },
-          { name: 'Normal text file', extensions: ['txt'] },
-          { name: 'All types', extensions: ['*'] }
-        ]
-      }
-      remote.dialog.showSaveDialog(options).then(result => {
-        if (!result.canceled) {
-          fs.writeFileSync(result.filePath, str)
-          this.$message.success('已保存成功')
-        }
-      }).catch(err => {
-        this.$message.error(err)
-      })
-    },
-    importSites () {
-      const options = {
-        filters: [
-          { name: 'JSON file', extensions: ['json'] },
-          { name: 'Normal text file', extensions: ['txt'] },
-          { name: 'All types', extensions: ['*'] }
-        ],
-        properties: ['openFile']
-      }
-      remote.dialog.showOpenDialog(options).then(result => {
-        if (!result.canceled) {
-          sites.clear()
-          result.filePaths.forEach(file => {
-            var str = fs.readFileSync(file)
-            const json = JSON.parse(str)
-            sites.bulkAdd(json).then(e => {
-              this.getSites()
-              this.d.site = json[0].key
-              setting.update(this.d).then(res => {
-                this.setting = this.d
-              })
-            })
-            this.$message.success('导入成功')
-          }).catch(err => {
-            this.$message.error(err)
-          })
-        }
-      })
+      this.updateSettingEvent()
     },
     editSitesEvent () {
       this.editSites = {
@@ -350,30 +283,14 @@ export default {
         sites: this.sitesList
       }
     },
-    resetSites () {
-      sites.clear()
-      sites.bulkAdd(defaultSites).then(e => {
-        this.getSites()
-        this.d.site = defaultSites[0].key
-        setting.update(this.d).then(res => {
-          this.setting = this.d
-          this.$message.success('重置源成功')
-        })
-      })
-    },
     changeTheme (e) {
       this.d.theme = e
-      setting.update(this.d).then(res => {
-        this.$message.success('修改成功')
-      })
+      this.updateSettingEvent()
     },
     changeShortcut (e) {
       this.d.shortcut = e
-      setting.update(this.d).then(res => {
-        this.$message.success('修改成功')
-        this.setting = this.d
-        this.show.shortcut = false
-      })
+      this.updateSettingEvent()
+      this.show.shortcut = false
     },
     expShortcut () {
       const arr = [...this.shortcutList]
@@ -422,8 +339,8 @@ export default {
     }
   },
   created () {
-    this.getSetting()
     this.getSites()
+    this.getSetting()
     this.getShortcut()
     this.getFavorites()
     this.getLatestVersion()
