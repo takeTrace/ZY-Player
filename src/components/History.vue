@@ -12,8 +12,7 @@
               :data="history"
               height="100%"
               row-key="id"
-              :border="tableBorder"
-              @header-click="tableBorder = !tableBorder"
+              :border=none
               @row-click="detailEvent"
               style="width: 100%">
               <el-table-column
@@ -67,8 +66,7 @@ export default {
   data () {
     return {
       history: [],
-      sites: [],
-      tableBorder: false
+      sites: []
     }
   },
   computed: {
@@ -242,13 +240,13 @@ export default {
   position: absolute;
   left: 80px;
   right: 20px;
+  top: 40px;
   bottom: 0;
   width: calc(100% - 100px);
   height: calc(100% - 40px);
-  z-index: 888;
+  border-radius: 5px;
   .detail-content{
-    height: calc(100% - 10px);
-    padding: 0 60px;
+    height: 100%;
     position: relative;
     .detail-header{
       width: 100%;
@@ -263,10 +261,10 @@ export default {
         cursor: pointer;
       }
     }
-  }
-  .detail-body{
-    height: calc(100% - 50px);
+    .detail-body{
+    height: calc(100% - 20px);
     overflow-y: auto;
+  }
   }
 }
 </style>
