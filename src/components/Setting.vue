@@ -42,6 +42,14 @@
           </div>
         </div>
       </div>
+      <div class="shortcut">
+        <div class="title">缓存</div>
+        <div class="shortcut-box">
+          <div class="zy-select">
+            <div class="vs-placeholder vs-noAfter" @click="clearCache">清理视频缓存</div>
+          </div>
+        </div>
+      </div>
       <div class="site">
         <div class="title">定位时间设置</div>
         <div class="zy-input">
@@ -228,6 +236,14 @@ export default {
       this.updateSettingEvent()
       this.show.view = false
     },
+    async clearCache () {
+      const win = remote.getCurrentWindow()
+      const ses = win.webContents.session
+      const size = await ses.getCacheSize() / 1024 / 1024
+      const mb = size.toFixed(2)
+      await ses.clearCache()
+      this.$message.success(`清除缓存成功, 共清理 ${mb} MB`)
+    },
     updateSettingEvent () {
       this.editPlayerPath = false
       this.setting = this.d
@@ -332,6 +348,17 @@ export default {
         var firstResult = $(e).find('div>div>a')
         this.latestVersion = firstResult.text()
       })
+    },
+    createContextMenu () {
+      const { Menu, MenuItem } = remote
+      const menu = new Menu()
+      menu.append(new MenuItem({ label: '快速复制', role: 'copy' }))
+      menu.append(new MenuItem({ label: '快速粘贴', role: 'paste' }))
+      menu.append(new MenuItem({ label: '编辑', role: 'editMenu' }))
+      window.addEventListener('contextmenu', e => {
+        e.preventDefault()
+        menu.popup(remote.getCurrentWindow())
+      })
     }
   },
   created () {
@@ -340,6 +367,7 @@ export default {
     this.getShortcut()
     this.getFavorites()
     this.getLatestVersion()
+    this.createContextMenu()
   }
 }
 </script>
