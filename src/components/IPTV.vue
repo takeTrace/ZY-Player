@@ -7,28 +7,27 @@
         <el-button @click.stop="importChannels" type="text">导入</el-button>
         <el-button @click.stop="removeAllChannels" type="text">清空</el-button>
         <el-button @click.stop="resetChannelsEvent" type="text">重置</el-button>
-        <el-input
-          placeholder="搜索"
-          size="mini"
-          v-model.trim="searchTxt">
-         <i slot="prefix" class="el-input__icon el-icon-search"></i>
-        </el-input>
       </div>
       <div class="listpage-body" id="iptv-table">
         <el-table
               :data="filteredTableData"
               row-key="id"
-              @row-click="playEvent"
-              style="width: 100%">
+              @row-click="playEvent">
               <el-table-column
                 prop="name"
-                label="频道名"
-                min-width="200">
+                label="频道名">
+                <template #header>
+                  <el-input
+                  placeholder="搜索"
+                  size="mini"
+                  v-model.trim="searchTxt">
+                  <i slot="prefix" class="el-input__icon el-icon-search"></i>
+                  </el-input>
+                </template>
               </el-table-column>
               <el-table-column
                 prop="group"
                 label="分组"
-                width="100"
                 :filters="getFilters"
                 :filter-method="filterHandle"
                 filter-placement="bottom-end">
@@ -40,7 +39,7 @@
                 label="操作"
                 header-align="center"
                 align="right"
-                width="140">
+                width="100">
                 <template slot-scope="scope">
                   <el-button @click.stop="moveToTopEvent(scope.row)" type="text">置顶</el-button>
                   <el-button @click.stop="removeEvent(scope.row)" type="text">删除</el-button>
