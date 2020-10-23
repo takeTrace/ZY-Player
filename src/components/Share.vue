@@ -69,6 +69,8 @@ export default {
       const id = this.share.info.ids || this.share.info.id
       zy.detail(this.share.key, id).then(res => {
         if (res) {
+          const _hmt = window._hmt
+          _hmt.push(['_trackEvent', 'film', 'share', res.name])
           this.pic = res.pic
           var m3u8List = {}
           const dd = res.dl.dd
@@ -89,7 +91,7 @@ export default {
       })
     },
     picLoadEvent () {
-      const dom = document.getElementById('right')
+      const dom = document.getElementById('share')
       html2canvas(dom, { useCORS: true, allowTaint: true }).then(res => {
         const png = res.toDataURL('image/png')
         const p = nativeImage.createFromDataURL(png)

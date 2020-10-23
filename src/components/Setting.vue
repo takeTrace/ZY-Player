@@ -141,9 +141,11 @@
 <script>
 import { mapMutations } from 'vuex'
 import pkg from '../../package.json'
-import { setting, sites, shortcut, star } from '../lib/dexie'
+import { setting, sites, shortcut } from '../lib/dexie'
+import { sites as defaultSites } from '../lib/dexie/initData'
 import { shell, clipboard, remote } from 'electron'
 import db from '../lib/dexie/dexie'
+const _hmt = window._hmt
 export default {
   name: 'setting',
   data () {
@@ -151,7 +153,6 @@ export default {
       pkg: pkg,
       sitesList: [],
       shortcutList: [],
-      favoritesList: [],
       show: {
         site: false,
         shortcut: false,
@@ -193,10 +194,18 @@ export default {
       set (val) {
         this.SET_SETTING(val)
       }
+    },
+    editSites: {
+      get () {
+        return this.$store.getters.getEditSites
+      },
+      set (val) {
+        this.SET_EDITSITES(val)
+      }
     }
   },
   methods: {
-    ...mapMutations(['SET_SETTING', 'SET_VIEW']),
+    ...mapMutations(['SET_SETTING', 'SET_VIEW', 'SET_EDITSITES']),
     linkOpen (e) {
       shell.openExternal(e)
     },
@@ -218,17 +227,20 @@ export default {
     },
     getSites () {
       sites.all().then(res => {
-        this.sitesList = res
+        if (res.length <= 0) {
+          this.$message.warning('检测到视频源未能正常加载, 即将重置源.')
+          sites.clear().then(sites.bulkAdd(defaultSites).then(this.getSites()))
+        } else {
+          this.sitesList = res
+          this.editSites = {
+            sites: res
+          }
+        }
       })
     },
     getShortcut () {
       shortcut.all().then(res => {
         this.shortcutList = res
-      })
-    },
-    getFavorites () {
-      star.all().then(res => {
-        this.favoritesList = res
       })
     },
     changeView (e) {
@@ -298,6 +310,7 @@ export default {
     changeTheme (e) {
       this.d.theme = e
       this.updateSettingEvent()
+      _hmt.push(['_trackEvent', 'setting', 'theme', e])
     },
     changeShortcut (e) {
       this.d.shortcut = e
@@ -306,7 +319,7 @@ export default {
     },
     expShortcut () {
       const arr = [...this.shortcutList]
-      const str = JSON.stringify(arr, null, 4)
+      const str = JSON.stringify(arr, null, 2)
       clipboard.writeText(str)
       this.$message.success('已复制到剪贴板')
     },
@@ -365,7 +378,6 @@ export default {
     this.getSites()
     this.getSetting()
     this.getShortcut()
-    this.getFavorites()
     this.getLatestVersion()
     this.createContextMenu()
   }

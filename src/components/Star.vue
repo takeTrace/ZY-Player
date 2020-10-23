@@ -8,65 +8,67 @@
         <el-button @click.stop="updateAllEvent" type="text">同步所有收藏</el-button>
       </div>
       <div class="listpage-body" id="star-table">
-        <el-table
-              :data="list"
-              height="100%"
-              row-key="id"
-              :cell-class-name="checkUpdate"
-              @row-click="detailEvent">
-              <el-table-column
-                sortable
-                prop="name"
-                label="片名">
-              </el-table-column>
-              <el-table-column
-                sortable
-                prop="type"
-                label="类型"
-                width="100">
-              </el-table-column>
-              <el-table-column
-                sortable
-                prop="year"
-                label="上映"
-                align="center">
-              </el-table-column>
-              <el-table-column
-                sortable
-                prop="site"
-                label="片源">
-                <template slot-scope="scope">
-                  <span>{{ getSiteName(scope.row.key) }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column v-if="list.some(e => e.note)"
-                sortable
-                prop="note"
-                label="备注">
-              </el-table-column>
-              <el-table-column v-if="list.some(e => e.index >= 0)"
-                sortable
-                prop="index"
-                label="观看至">
-                <template slot-scope="scope">
-                  <span>{{ getHistoryNote(scope.row.index) }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column
-                label="操作"
-                header-align="center"
-                align="right"
-                width="180">
-                <template slot-scope="scope">
-                  <el-button @click.stop="playEvent(scope.row)" type="text">播放</el-button>
-                  <el-button @click.stop="shareEvent(scope.row)" type="text">分享</el-button>
-                  <el-button @click.stop="downloadEvent(scope.row)" type="text">下载</el-button>
-                  <el-button @click.stop="deleteEvent(scope.row)" type="text">删除</el-button>
-                </template>
-              </el-table-column>
+        <el-table size="mini" fit :data="list" height="100%" row-key="id" :cell-class-name="checkUpdate" @row-click="detailEvent">
+          <el-table-column
+            sortable
+            :sort-method="sortByName"
+            prop="name"
+            label="片名">
+          </el-table-column>
+          <el-table-column
+            :sort-by="['type', 'name']"
+            sortable
+            :sort-method="sortByType"
+            prop="type"
+            label="类型"
+            width="100">
+          </el-table-column>
+          <el-table-column
+            sortable
+            :sort-by="['year', 'name']"
+            prop="year"
+            label="上映"
+            width="100"
+            align="center">
+          </el-table-column>
+          <el-table-column
+            :sort-by="['site', 'name']"
+            sortable
+            :sort-method="sortBySite"
+            prop="site"
+            width="120"
+            label="片源">
+            <template slot-scope="scope">
+              <span>{{ getSiteName(scope.row.key) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column v-if="list.some(e => e.note)"
+            prop="note"
+            width="120"
+            label="备注">
+          </el-table-column>
+          <el-table-column v-if="list.some(e => e.index >= 0)"
+            prop="index"
+            width="120"
+            label="观看至">
+            <template slot-scope="scope">
+              <span>{{ getHistoryNote(scope.row.index) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="操作"
+            header-align="center"
+            align="right">
+            <template slot-scope="scope">
+              <el-button @click.stop="playEvent(scope.row)" type="text">播放</el-button>
+              <el-button @click.stop="shareEvent(scope.row)" type="text">分享</el-button>
+              <el-button @click.stop="downloadEvent(scope.row)" type="text">下载</el-button>
+              <el-button @click.stop="deleteEvent(scope.row)" type="text">删除</el-button>
+            </template>
+          </el-table-column>
         </el-table>
+      </div>
     </div>
-   </div>
   </div>
 </template>
 <script>
@@ -127,6 +129,20 @@ export default {
   },
   methods: {
     ...mapMutations(['SET_VIEW', 'SET_DETAIL', 'SET_VIDEO', 'SET_SHARE']),
+    sortByName (a, b) {
+      return a.name.localeCompare(b.name)
+    },
+    sortByType (a, b) {
+      return a.type.localeCompare(b.type)
+    },
+    sortBySite (a, b) {
+      const siteA = this.getSiteName(a.key)
+      if (!siteA) {
+        return -1
+      } else {
+        return siteA.localeCompare(this.getSiteName(b.key))
+      }
+    },
     detailEvent (e) {
       this.detail = {
         show: true,
@@ -285,7 +301,7 @@ export default {
     },
     exportFavoritesEvent () {
       const arr = [...this.list]
-      const str = JSON.stringify(arr, null, 4)
+      const str = JSON.stringify(arr, null, 2)
       const options = {
         filters: [
           { name: 'JSON file', extensions: ['json'] },

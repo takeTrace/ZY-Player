@@ -213,6 +213,8 @@ export default {
           }
         })
       }
+      const _hmt = window._hmt
+      _hmt.push(['_trackEvent', 'site', 'change', e.name])
     },
     classClick (e) {
       this.show.classList = false
@@ -223,6 +225,8 @@ export default {
           this.infiniteId += 1
         }
       })
+      const _hmt = window._hmt
+      _hmt.push(['_trackEvent', 'class', 'change', e.name])
     },
     getClass () {
       return new Promise((resolve, reject) => {
@@ -402,6 +406,15 @@ export default {
         this.searchList = res.reverse()
       })
     },
+    searchEvent (wd) {
+      if (this.setting.searchAllSites) {
+        this.searchAllSitesEvent(this.sites, wd)
+      } else {
+        this.searchSingleSiteEvent(this.site, wd)
+      }
+      const _hmt = window._hmt
+      _hmt.push(['_trackEvent', 'film', 'search', wd])
+    },
     searchAllSitesEvent (sites, wd) {
       this.searchTxt = wd
       this.searchContents = []
@@ -439,13 +452,6 @@ export default {
         })
       }
     },
-    searchEvent (wd) {
-      if (this.setting.searchAllSites) {
-        this.searchAllSitesEvent(this.sites, wd)
-      } else {
-        this.searchSingleSiteEvent(this.site, wd)
-      }
-    },
     searchSingleSiteEvent (site, wd) {
       var sites = []
       sites.push(this.site)
@@ -470,14 +476,19 @@ export default {
     },
     getAllsites () {
       sites.all().then(res => {
-        this.sites = res.filter(x => x.isActive)
-        this.site = this.sites[0]
-        this.siteClick(this.site)
+        if (res.length <= 0) {
+          this.site = {}
+          this.type = {}
+          this.list = []
+        } else {
+          this.sites = res.filter(x => x.isActive)
+          this.site = this.sites[0]
+          this.siteClick(this.site)
+        }
       })
     }
   },
   created () {
-    this.getAllsites()
     this.getAllSearch()
   }
 }
