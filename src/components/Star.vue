@@ -2,13 +2,18 @@
   <div class="listpage" id="star">
     <div class="listpage-content">
       <div class="listpage-header">
-        <el-button @click.stop="exportFavoritesEvent" type="text">导出</el-button>
-        <el-button @click.stop="importFavoritesEvent" type="text">导入</el-button>
-        <el-button @click.stop="clearFavoritesEvent" type="text">清空</el-button>
-        <el-button @click.stop="updateAllEvent" type="text">同步所有收藏</el-button>
+        <el-button @click.stop="exportFavoritesEvent" icon="el-icon-upload2">导出</el-button>
+        <el-button @click.stop="importFavoritesEvent" icon="el-icon-download">导入</el-button>
+        <el-button @click.stop="clearFavoritesEvent" icon="el-icon-delete-solid">清空</el-button>
+        <el-button @click.stop="updateAllEvent" icon="el-icon-refresh">同步所有收藏</el-button>
       </div>
       <div class="listpage-body" id="star-table">
-        <el-table size="mini" fit height="100%" row-key="id" :data="list" :cell-class-name="checkUpdate" @row-click="detailEvent">
+        <el-table size="mini" fit height="100%" row-key="id"
+        ref="starTable"
+        :data="list"
+        :cell-class-name="checkUpdate"
+        @row-click="detailEvent"
+        @sort-change="handleSortChange">
           <el-table-column
             sortable
             :sort-method="sortByName"
@@ -129,6 +134,9 @@ export default {
   },
   methods: {
     ...mapMutations(['SET_VIEW', 'SET_DETAIL', 'SET_VIDEO', 'SET_SHARE']),
+    handleSortChange (column, prop, order) {
+      this.updateDatabase()
+    },
     sortByName (a, b) {
       return a.name.localeCompare(b.name, 'zh')
     },
@@ -201,14 +209,17 @@ export default {
     updateEvent (e) {
       zy.detail(e.key, e.ids).then(res => {
         var doc = {
-          key: e.key,
           id: e.id,
+          key: e.key,
           ids: res.id,
-          last: res.last,
+          site: res.site,
           name: res.name,
           type: res.type,
           year: res.year,
-          note: res.note
+          note: res.note,
+          index: res.index,
+          last: res.last,
+          hasUpdate: res.hasUpdate
         }
         star.get(e.id).then(resStar => {
           doc.hasUpdate = resStar.hasUpdate
@@ -332,6 +343,11 @@ export default {
           result.filePaths.forEach(file => {
             var str = fs.readFileSync(file)
             const json = JSON.parse(str)
+            json.forEach(ele => {
+              if (ele.site === undefined) {
+                ele.site = this.sites.find(x => x.key === ele.key)
+              }
+            })
             star.bulkAdd(json).then(e => {
               this.getFavorites()
             })
@@ -369,14 +385,17 @@ export default {
         this.getFavorites()
       })
     },
-    updateDatabase (data) {
+    updateDatabase () {
+      if (this.$refs.starTable.tableData.length === this.list.length) {
+        this.list = this.$refs.starTable.tableData
+      }
       star.clear().then(res => {
-        var id = length
-        data.forEach(ele => {
+        var id = this.list.length
+        this.list.forEach(ele => {
           ele.id = id
           id -= 1
         })
-        star.bulkAdd(data)
+        star.bulkAdd(this.list)
       })
     },
     rowDrop () {
@@ -386,7 +405,7 @@ export default {
         onEnd ({ newIndex, oldIndex }) {
           const currRow = _this.list.splice(oldIndex, 1)[0]
           _this.list.splice(newIndex, 0, currRow)
-          _this.updateDatabase(_this.list)
+          _this.updateDatabase()
         }
       })
     }

@@ -3,10 +3,10 @@
     <div class="listpage-content">
       <div class="listpage-header" v-show="!enableBatchEdit">
         <el-switch v-model="enableBatchEdit" active-text="批处理分组"></el-switch>
-        <el-button @click.stop="exportChannels" type="text">导出</el-button>
-        <el-button @click.stop="importChannels" type="text">导入</el-button>
-        <el-button @click.stop="removeAllChannels" type="text">清空</el-button>
-        <el-button @click.stop="resetChannelsEvent" type="text">重置</el-button>
+        <el-button @click.stop="exportChannels" icon="el-icon-upload2" >导出</el-button>
+        <el-button @click.stop="importChannels" icon="el-icon-download">导入</el-button>
+        <el-button @click.stop="removeAllChannels" icon="el-icon-delete-solid">清空</el-button>
+        <el-button @click.stop="resetChannelsEvent" icon="el-icon-refresh-left">重置</el-button>
       </div>
       <div class="listpage-header" v-show="enableBatchEdit">
         <el-switch v-model="enableBatchEdit" active-text="批处理分组"></el-switch>
@@ -19,12 +19,14 @@
           size="mini" fit height="100%" row-key="id"
           :data="filteredTableData"
           @row-click="playEvent"
-          @selection-change="handleSelectionChange">
+          @selection-change="handleSelectionChange"
+          @sort-change="handleSortChange">>
           <el-table-column
             type="selection"
             v-if="enableBatchEdit">
           </el-table-column>
           <el-table-column
+            default-sort="ascending"
             prop="name"
             label="频道名">
             <template #header>
@@ -37,6 +39,9 @@
             </template>
           </el-table-column>
           <el-table-column
+            sort-by="['group', 'name']"
+            sortable
+            :sort-method="sortByGroup"
             prop="group"
             label="分组"
             :filters="getFilters"
@@ -134,8 +139,14 @@ export default {
   },
   methods: {
     ...mapMutations(['SET_VIEW', 'SET_DETAIL', 'SET_VIDEO', 'SET_SHARE']),
+    sortByGroup (a, b) {
+      return a.group.localeCompare(b.group, 'zh')
+    },
     handleSelectionChange (rows) {
       this.multipleSelection = rows
+    },
+    handleSortChange (column, prop, order) {
+      this.updateDatabase()
     },
     saveBatchEdit () {
       if (this.multipleSelection && this.batchGroupName) {
@@ -217,17 +228,17 @@ export default {
           var docs = this.iptvList
           var id = docs.length
           result.filePaths.forEach(file => {
-            if (file.endsWith('m3u')) {
+            if (file.endsWith('m3u') || file.endsWith('m3u8')) {
               const parser = require('iptv-playlist-parser')
               const playlist = fs.readFileSync(file, { encoding: 'utf-8' })
               const result = parser.parse(playlist)
               result.items.forEach(ele => {
-                if (ele.name && ele.url && ele.url.includes('.m3u8')) {
+                if (ele.name && ele.url && ele.url.endsWith('.m3u8')) {
                   var doc = {
                     id: id,
                     name: ele.name,
                     url: ele.url,
-                    group: this.determineGroup(ele.group, ele.name)
+                    group: this.determineGroup(ele.name)
                   }
                   id += 1
                   docs.push(doc)
@@ -238,12 +249,12 @@ export default {
               var str = fs.readFileSync(file)
               const json = JSON.parse(str)
               json.forEach(ele => {
-                if (ele.name && ele.url && ele.url.includes('.m3u8')) {
+                if (ele.name && ele.url && ele.url.endsWith('.m3u8')) {
                   var doc = {
                     id: id,
                     name: ele.name,
                     url: ele.url,
-                    group: ele.group === undefined ? this.determineGroup(ele.group, ele.name) : ele.group
+                    group: this.determineGroup(ele.name)
                   }
                   id += 1
                   docs.push(doc)
@@ -251,8 +262,8 @@ export default {
               })
             }
           })
-          // 获取url不重复的列表
-          const uniqueList = [...new Map(docs.map(item => [item.url, item])).values()]
+          // 获取name不重复的列表
+          const uniqueList = [...new Map(docs.map(item => [item.name, item])).values()]
           iptv.clear().then(res => {
             iptv.bulkAdd(uniqueList).then(e => {
               this.getChannels()
@@ -262,13 +273,17 @@ export default {
         }
       })
     },
-    determineGroup (group, name) {
-      if (!group) {
-        return group
+    determineGroup (name) {
+      if (name.toLowerCase().includes('cctv') && (name.includes('蓝光') || name.includes('高清'))) {
+        return '央视高清'
       } else if (name.toLowerCase().includes('cctv')) {
         return '央视'
       } else if (name.includes('卫视')) {
         return '卫视'
+      } else if (name.includes('香港') || name.includes('澳门') || name.includes('台湾') || name.includes('凤凰')) {
+        return '港澳台'
+      } else if (name.includes('高清') || name.includes('蓝光') || name.includes('1080P')) {
+        return '高清'
       } else {
         return '其他'
       }
@@ -317,9 +332,12 @@ export default {
       this.updateDatabase()
     },
     updateDatabase () {
+      if (this.$refs.iptvTable.tableData && this.$refs.iptvTable.tableData.length === this.iptvList.length) {
+        this.iptvList = this.$refs.iptvTable.tableData
+      }
       iptv.clear().then(res => {
         this.resetId(this.iptvList)
-        iptv.bulkAdd(this.iptvList).then(this.getChannels())
+        iptv.bulkAdd(this.iptvList)
       })
     },
     resetId (inArray) {

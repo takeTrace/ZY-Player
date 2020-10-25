@@ -3,11 +3,11 @@
     <div class="listpage-content">
       <div class="listpage-header" v-show="!enableBatchEdit">
         <el-switch v-model="enableBatchEdit" active-text="批处理分组">></el-switch>
-        <el-button @click.stop="addSite" type="text">新增</el-button>
-        <el-button @click.stop="exportSites" type="text">导出</el-button>
-        <el-button @click.stop="importSites" type="text">导入</el-button>
-        <el-button @click.stop="removeAllSites" type="text">清空</el-button>
-        <el-button @click.stop="resetSitesEvent" type="text">重置</el-button>
+        <el-button @click.stop="addSite" icon="el-icon-document-add">新增</el-button>
+        <el-button @click.stop="exportSites" icon="el-icon-upload2" >导出</el-button>
+        <el-button @click.stop="importSites" icon="el-icon-download">导入</el-button>
+        <el-button @click.stop="removeAllSites" icon="el-icon-delete-solid">清空</el-button>
+        <el-button @click.stop="resetSitesEvent" icon="el-icon-refresh-left">重置</el-button>
       </div>
       <div class="listpage-header" v-show="enableBatchEdit">
         <el-switch v-model="enableBatchEdit" active-text="批处理分组"></el-switch>
@@ -20,7 +20,8 @@
           ref="editSitesTable"
           size="mini" fit height="100%" row-key="id"
           :data="sites"
-          @selection-change="handleSelectionChange">
+          @selection-change="handleSelectionChange"
+          @sort-change="handleSortChange">
           <el-table-column
             type="selection"
             v-if="enableBatchEdit">
@@ -30,6 +31,7 @@
             label="资源名">
           </el-table-column>
           <el-table-column
+            sortable
             prop="isActive"
             label="自选源">
             <template slot-scope="scope">
@@ -81,6 +83,9 @@
           <el-form-item label="分组" prop='group'>
             <el-input v-model="siteInfo.group" :autosize="{ minRows: 2, maxRows: 4}" type="textarea" placeholder="请输入分组"/>
           </el-form-item>
+          <el-form-item label="源站标识" prop='key'>
+            <el-input v-model="siteInfo.key" placeholder="请输入源站标识，如果为空，系统则自动生成" />
+          </el-form-item>
         </el-form>
         <span slot="footer" class="dialog-footer">
           <el-button @click="closeDialog">取消</el-button>
@@ -109,6 +114,7 @@ export default {
       dialogType: 'new',
       dialogVisible: false,
       siteInfo: {
+        key: '',
         name: '',
         api: '',
         download: '',
@@ -170,6 +176,9 @@ export default {
     handleSelectionChange (rows) {
       this.multipleSelection = rows
     },
+    handleSortChange (column, prop, order) {
+      this.updateDatabase()
+    },
     saveBatchEdit () {
       this.multipleSelection.forEach(ele => {
         if (this.batchGroupName) {
@@ -191,6 +200,7 @@ export default {
       this.dialogType = 'new'
       this.dialogVisible = true
       this.siteInfo = {
+        key: '',
         name: '',
         api: '',
         download: '',
@@ -232,7 +242,7 @@ export default {
       }
       var randomstring = require('randomstring')
       var doc = {
-        key: this.dialogType === 'edit' ? this.siteInfo.key : randomstring.generate(6),
+        key: this.dialogType === 'edit' ? this.siteInfo.key : this.siteInfo.key ? this.siteInfo.key : randomstring.generate(6),
         id: this.dialogType === 'edit' ? this.siteInfo.id : this.sites[this.sites.length - 1].id + 1,
         name: this.siteInfo.name,
         api: this.siteInfo.api,
@@ -245,6 +255,7 @@ export default {
       if (this.dialogType === 'edit') sites.remove(this.siteInfo.id)
       sites.add(doc).then(res => {
         this.siteInfo = {
+          key: '',
           name: '',
           api: '',
           download: '',
@@ -328,13 +339,16 @@ export default {
       })
     },
     updateDatabase () {
+      if (this.$refs.editSitesTable.tableData && this.$refs.editSitesTable.tableData.length === this.sites.length) {
+        this.sites = this.$refs.editSitesTable.tableData
+      }
       sites.clear().then(res => {
         var id = 1
         this.sites.forEach(ele => {
           ele.id = id
           id += 1
         })
-        sites.bulkAdd(this.sites).then(this.getSites())
+        sites.bulkAdd(this.sites)
       })
     },
     removeAllSites () {
