@@ -31,7 +31,6 @@
             label="资源名">
           </el-table-column>
           <el-table-column
-            sortable
             prop="isActive"
             label="自选源">
             <template slot-scope="scope">
@@ -44,8 +43,6 @@
             </template>
           </el-table-column>
           <el-table-column
-            :sort-by="['group', 'name']"
-            sortable
             prop="group"
             label="分组"
             :filters="getFilters"
@@ -177,7 +174,7 @@ export default {
       this.multipleSelection = rows
     },
     handleSortChange (column, prop, order) {
-      this.updateDatabase()
+      this.updateDatabase(this.sites)
     },
     saveBatchEdit () {
       this.multipleSelection.forEach(ele => {
@@ -328,7 +325,12 @@ export default {
       this.sites.sort(function (x, y) { return x.key === i.key ? -1 : y.key === i.key ? 1 : 0 })
       this.updateDatabase()
     },
-    isActiveChangeEvent () {
+    syncTableData () {
+      if (this.$refs.editSitesTable.tableData && this.$refs.editSitesTable.tableData.length === this.sites.length) {
+        this.sites = this.$refs.editSitesTable.tableData
+      }
+    },
+    isActiveChangeEvent (row) {
       this.updateDatabase()
     },
     resetId (inArray) {
@@ -339,16 +341,15 @@ export default {
       })
     },
     updateDatabase () {
-      if (this.$refs.editSitesTable.tableData && this.$refs.editSitesTable.tableData.length === this.sites.length) {
-        this.sites = this.$refs.editSitesTable.tableData
-      }
+      // 因为el-table的数据是单向绑定,我们先同步el-table里的数据和其绑定的数据
+      this.syncTableData()
       sites.clear().then(res => {
         var id = 1
         this.sites.forEach(ele => {
           ele.id = id
           id += 1
         })
-        sites.bulkAdd(this.sites)
+        sites.bulkAdd(this.sites).then(this.getSites())
       })
     },
     removeAllSites () {
@@ -356,7 +357,7 @@ export default {
     },
     rowDrop () {
       const tbody = document.getElementById('sites-table').querySelector('.el-table__body-wrapper tbody')
-      const _this = this
+      var _this = this
       Sortable.create(tbody, {
         onEnd ({ newIndex, oldIndex }) {
           const currRow = _this.sites.splice(oldIndex, 1)[0]
