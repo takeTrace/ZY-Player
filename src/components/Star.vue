@@ -126,6 +126,12 @@ export default {
       }
     }
   },
+  watch: {
+    view () {
+      this.getAllsites()
+      this.getFavorites()
+    }
+  },
   methods: {
     ...mapMutations(['SET_VIEW', 'SET_DETAIL', 'SET_VIDEO', 'SET_SHARE']),
     handleSortChange (column, prop, order) {
@@ -158,14 +164,13 @@ export default {
         this.clearHasUpdateFlag(e)
       }
     },
-    playEvent (e) {
-      history.find({ site: e.key, ids: e.ids }).then(res => {
-        if (res) {
-          this.video = { key: e.key, info: { id: res.ids, name: res.name, index: res.index } }
-        } else {
-          this.video = { key: e.key, info: { id: e.ids, name: e.name, index: 0 } }
-        }
-      })
+    async playEvent (e) {
+      const db = await history.find({ site: e.key, ids: e.ids })
+      if (db) {
+        this.video = { key: e.key, info: { id: db.ids, name: db.name, index: db.index } }
+      } else {
+        this.video = { key: e.key, info: { id: e.ids, name: e.name, index: 0 } }
+      }
       if (e.hasUpdate) {
         this.clearHasUpdateFlag(e)
       }
@@ -193,12 +198,13 @@ export default {
         return 'highlight'
       }
     },
-    clearHasUpdateFlag (e) {
-      star.find({ id: e.id }).then(res => {
-        res.hasUpdate = false
-        star.update(e.id, res)
+    async clearHasUpdateFlag (e) {
+      const db = await star.find({ id: e.id })
+      if (db) {
+        db.hasUpdate = false
+        star.update(e.id, db)
         this.getFavorites()
-      })
+      }
     },
     updateEvent (e) {
       zy.detail(e.key, e.ids).then(res => {
@@ -334,44 +340,36 @@ export default {
       }
       remote.dialog.showOpenDialog(options).then(result => {
         if (!result.canceled) {
+          var starList = this.list
           result.filePaths.forEach(file => {
             var str = fs.readFileSync(file)
             const json = JSON.parse(str)
             json.forEach(ele => {
-              if (ele.site === undefined) {
-                ele.site = this.sites.find(x => x.key === ele.key)
+              const starExists = starList.includes(x => x.key === ele.key && x.ids === ele.ids)
+              if (!starExists) {
+                var doc = {
+                  key: ele.key,
+                  ids: ele.ids,
+                  site: ele.site === undefined ? ele.site = this.sites.find(x => x.key === ele.key) : ele.site,
+                  name: ele.name,
+                  type: ele.type,
+                  year: ele.year,
+                  note: ele.note,
+                  index: ele.index,
+                  last: ele.last,
+                  hasUpdate: ele.hasUpdate
+                }
+                starList.push(doc)
               }
             })
-            star.bulkAdd(json).then(e => {
-              this.getFavorites()
-            })
-            this.upgradeFavorites()
           })
-          this.$message.success('导入收藏成功')
+          star.clear().then(star.bulkAdd(starList).then(res => {
+            this.getFavorites()
+            this.$message.success('导入收藏成功')
+          }))
         }
       }).catch(err => {
         this.$message.error(err)
-      })
-    },
-    upgradeFavorites () {
-      star.all().then(res => {
-        res.forEach(element => {
-          const docs = {
-            key: element.key,
-            ids: element.ids,
-            name: element.name,
-            type: element.type,
-            year: element.year,
-            last: element.last,
-            note: element.note
-          }
-          star.find({ key: element.key, ids: element.ids }).then(res => {
-            if (!res) {
-              star.add(docs)
-            }
-          })
-        })
-        this.getFavorites()
       })
     },
     clearFavoritesEvent () {

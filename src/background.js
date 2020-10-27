@@ -4,6 +4,7 @@ import './lib/site/server'
 import { app, protocol, BrowserWindow, globalShortcut, ipcMain } from 'electron'
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib'
 import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer'
+import { initUpdater } from './lib/update/update'
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
 // 允许跨域
@@ -34,6 +35,8 @@ function createWindow () {
     createProtocol('app')
     win.loadURL('app://./index.html')
   }
+
+  initUpdater(win)
 
   win.on('closed', () => {
     win = null

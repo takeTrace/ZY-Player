@@ -87,11 +87,13 @@
               <ul>
                 <li v-for="(i, j) in searchContents" :key="j" @click="detailEvent(i.site, i)">
                   <span class="name">{{i.name}}</span>
-                  <span class="site">{{i.site.name}}</span>
-                  <span class="type">{{i.type}}</span>
-                  <span class="time">{{i.year}}</span>
-                  <span class="note">{{i.note}}</span>
-                  <span class="last">{{i.last}}</span>
+                  <span class="info">{{i.site.name}}</span>
+                  <span class="info">{{i.director}}</span>
+                  <span class="info">{{i.type}}</span>
+                  <span class="info">{{i.area}}</span>
+                  <span class="info">{{i.lang}}</span>
+                  <span class="info">{{i.year}}</span>
+                  <span class="info">{{i.note}}</span>
                   <span class="operate">
                     <span class="btn" @click.stop="playEvent(i.site, i)">播放</span>
                     <span class="btn" @click.stop="starEvent(i.site, i)">收藏</span>
@@ -137,7 +139,7 @@ export default {
       searchTxt: '',
       searchContents: [],
       // 福利片关键词
-      r18KeyWords: ['伦理', '倫理', '福利', '激情', '理论', '写真', '情色', '美女', '街拍', '赤足', '性感', '里番']
+      r18KeyWords: ['伦理', '论理', '倫理', '福利', '激情', '理论', '写真', '情色', '美女', '街拍', '赤足', '性感', '里番']
     }
   },
   components: {
@@ -314,38 +316,34 @@ export default {
         info: e
       }
     },
-    playEvent (site, e) {
-      history.find({ site: site.key, ids: e.id }).then(res => {
-        if (res) {
-          this.video = { key: res.site, info: { id: res.ids, name: res.name, index: res.index, site: site } }
-        } else {
-          this.video = { key: site.key, info: { id: e.id, name: e.name, index: 0, site: site } }
-        }
-      })
+    async playEvent (site, e) {
+      const db = await history.find({ site: site.key, ids: e.id })
+      if (db) {
+        this.video = { key: db.site, info: { id: db.ids, name: db.name, index: db.index, site: site } }
+      } else {
+        this.video = { key: site.key, info: { id: e.id, name: e.name, index: 0, site: site } }
+      }
       this.view = 'Play'
     },
-    starEvent (site, e) {
-      star.find({ key: site.key, ids: e.id }).then(res => {
-        if (res) {
-          this.$message.info('已存在')
-        } else {
-          const docs = {
-            key: site.key,
-            ids: e.id,
-            site: site,
-            name: e.name,
-            type: e.type,
-            year: e.year,
-            last: e.last,
-            note: e.note
-          }
-          star.add(docs).then(res => {
-            this.$message.success('收藏成功')
-          })
+    async starEvent (site, e) {
+      const db = await star.find({ key: site.key, ids: e.id })
+      if (db) {
+        this.$message.info('已存在')
+      } else {
+        const docs = {
+          key: site.key,
+          ids: e.id,
+          site: site,
+          name: e.name,
+          type: e.type,
+          year: e.year,
+          last: e.last,
+          note: e.note
         }
-      }).catch(() => {
-        this.$message.warning('收藏失败')
-      })
+        star.add(docs).then(res => {
+          this.$message.success('收藏成功')
+        })
+      }
     },
     shareEvent (site, e) {
       this.share = {
@@ -435,13 +433,17 @@ export default {
             const type = Object.prototype.toString.call(res)
             if (type === '[object Array]') {
               res.forEach(element => {
-                element.site = site
-                this.searchContents.push(element)
+                zy.detail(site.key, element.id).then(detailRes => {
+                  detailRes.site = site
+                  this.searchContents.push(detailRes)
+                })
               })
             }
             if (type === '[object Object]') {
-              res.site = site
-              this.searchContents.push(res)
+              zy.detail(site.key, res.id).then(detailRes => {
+                detailRes.site = site
+                this.searchContents.push(detailRes)
+              })
             }
           })
         })
@@ -483,7 +485,9 @@ export default {
           this.type = {}
           this.list = []
         } else {
-          this.sites = res.filter(x => x.isActive)
+          this.sites = res.filter((item, index, self) => {
+            return self.indexOf(item) >= 0 && item.isActive
+          })
           this.site = this.sites[0]
           this.siteClick(this.site)
         }
