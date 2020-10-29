@@ -13,7 +13,7 @@
         <div class="vs-placeholder" @click="show.classList = true">{{type.name}}</div>
         <div class="vs-options" v-show="show.classList">
           <ul class="zy-scroll" style="max-height: 600px;">
-            <li :class="type.tid === i.tid ? 'active' : ''" v-for="i in classList" :key="i.tid" @click="classClick(i)">{{ i.name }}</li>
+            <li :class="type.tid === i.tid ? 'active' : ''" v-for="i in classList" :key="i.tid" @click="classClick(i)">{{ i.name | classNameFilter }}</li>
           </ul>
         </div>
       </div>
@@ -186,6 +186,11 @@ export default {
       return this.$store.getters.getEditSites.sites // 需要监听的数据
     }
   },
+  filters: {
+    classNameFilter: (name) => {
+      return name.replace(/[^\u4e00-\u9fa5]/gi, '')
+    }
+  },
   watch: {
     view () {
       this.changeView()
@@ -216,8 +221,6 @@ export default {
           }
         })
       }
-      const _hmt = window._hmt
-      _hmt.push(['_trackEvent', 'site', 'change', e.name])
     },
     classClick (e) {
       this.show.classList = false
@@ -228,8 +231,6 @@ export default {
           this.infiniteId += 1
         }
       })
-      const _hmt = window._hmt
-      _hmt.push(['_trackEvent', 'class', 'change', e.name])
     },
     getClass () {
       return new Promise((resolve, reject) => {
@@ -412,8 +413,6 @@ export default {
       } else {
         this.searchSingleSiteEvent(this.site, wd)
       }
-      const _hmt = window._hmt
-      _hmt.push(['_trackEvent', 'film', 'search', wd])
     },
     searchAllSitesEvent (sites, wd) {
       this.searchTxt = wd

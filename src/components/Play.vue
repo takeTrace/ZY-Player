@@ -3,23 +3,20 @@
     <div class="box">
       <div class="title">
         <span v-if="this.right.list.length > 1">『第 {{(video.info.index + 1)}} 集』</span>{{name}}
-        <span v-if="video.key" class="right" @click="playWithExternalPalyerEvent" title="使用第三方播放器">
-          <svg role="img" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-            <polygon points="20 8 20 20 4 20 4 8"></polygon>
-            <polyline stroke-linejoin="round" points="8 4 12 7.917 16 4"></polyline>
-          </svg>
-        </span>
-        <span v-if="video.key" class="right" @click="issueEvent" title="复制调试信息">
-          <svg t="1596338860607" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3127" width="24" height="24">
-            <path d="M503.803829 63.578014c-247.050676 0-447.328072 200.277396-447.328072 447.327048 0 247.054769 200.277396 447.333188 447.328072 447.333188 247.054769 0 447.332165-200.278419 447.332165-447.333188C951.13497 263.85541 750.858598 63.578014 503.803829 63.578014L503.803829 63.578014zM503.803829 894.313336c-211.749682 0-383.408273-171.659615-383.408273-383.408273 0-211.749682 171.659615-383.40725 383.408273-383.40725 211.753775 0 383.412366 171.658591 383.412366 383.40725C887.216195 722.653721 715.557604 894.313336 503.803829 894.313336L503.803829 894.313336zM447.745069 255.897158l127.914298 0L575.659367 383.576095 447.745069 383.576095 447.745069 255.897158 447.745069 255.897158zM447.745069 425.470251l127.914298 0 0 342.058516L447.745069 767.528767 447.745069 425.470251 447.745069 425.470251zM447.745069 425.470251" p-id="3128"></path>
-          </svg>
-        </span>
       </div>
       <div class="player">
         <div id="xgplayer"></div>
       </div>
       <div class="more">
-        <span class="zy-svg" @click="nextEvent" v-show="showNext">
+        <span class="zy-svg" @click="otherEvent" v-show="name !== ''">
+          <svg role="img" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-labelledby="coloursIconTitle">
+            <title id="coloursIconTitle">换源</title>
+            <circle cx="12" cy="9" r="5"></circle>
+            <circle cx="9" cy="14" r="5"></circle>
+            <circle cx="15" cy="14" r="5"></circle>
+          </svg>
+        </span>
+        <span class="zy-svg" @click="nextEvent" v-show="right.list.length > 1">
           <svg role="img" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-labelledby="forwardIconTitle">
             <title id="forwardIconTitle">下一集</title>
             <path d="M10 14.74L3 19V5l7 4.26V5l12 7-12 7v-4.26z"></path>
@@ -58,8 +55,14 @@
           </svg>
         </span>
         <span class="zy-svg" @click="miniEvent" v-show="right.list.length > 0">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-labelledby="diamondIconTitle">
+            <title id="diamondIconTitle">精简模式</title>
+            <path d="M12 20L3 11M12 20L21 11M12 20L8 11M12 20L16 11M3 11L7 5M3 11H8M7 5L8 11M7 5H12M17 5L21 11M17 5L16 11M17 5H12M21 11H16M8 11H16M8 11L12 5M16 11L12 5"></path>
+          </svg>
+        </span>
+        <span class="zy-svg" @click="playWithExternalPalyerEvent" v-show="right.list.length > 0">
           <svg role="img" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-labelledby="tvIconTitle">
-            <title id="tvIconTitle">精简模式</title>
+            <title id="tvIconTitle" >使用第三方播放器</title>
             <polygon points="20 8 20 20 4 20 4 8"></polygon>
             <polyline stroke-linejoin="round" points="8 4 12 7.917 16 4"></polyline>
           </svg>
@@ -81,13 +84,21 @@
             <rect x="17" y="6" width="1" height="1"></rect>
           </svg>
         </span>
+        <span class="zy-svg" @click="issueEvent" v-show="right.list.length > 0">
+          <svg role="img" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-labelledby="infoIconTitle">
+            <title id="infoIconTitle">复制调试信息</title>
+            <path d="M12,12 L12,15"></path>
+            <line x1="12" y1="9" x2="12" y2="9"></line>
+            <circle cx="12" cy="12" r="10"></circle>
+          </svg>
+        </span>
         <span class="last-tip" v-if="!video.key && right.history.length > 0" @click="historyItemEvent(right.history[0])">上次播放到【{{right.history[0].site}}】{{right.history[0].name}} 第{{right.history[0].index+1}}集</span>
       </div>
     </div>
     <transition name="slideX">
       <div v-if="right.show" class="list">
         <div class="list-top">
-          <span class="list-top-title">{{ right.type === 'list' ? '播放列表' : '历史记录' }}</span>
+          <span class="list-top-title">{{ right.type === 'list' ? '播放列表' : right.type === 'history' ? '历史记录' : '其他相同资源' }}</span>
           <span class="list-top-close zy-svg" @click="closeListEvent">
             <svg role="img" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-labelledby="closeIconTitle">
               <title id="closeIconTitle">关闭</title>
@@ -106,6 +117,10 @@
             <li v-show="right.history.length === 0">无数据</li>
             <li @click="historyItemEvent(m)" :class="video.info.id === m.ids ? 'active' : ''" v-for="(m, n) in right.history" :key="n"><span class="title" :title="'【' + m.site + '】' + m.name + ' 第' + (m.index+1) + '集'">【{{m.site}}】{{m.name}} 第{{m.index+1}}集</span><span @click.stop="removeHistoryItem(m)" class="detail-delete">删除</span></li>
           </ul>
+          <ul v-show="right.type === 'other'" class="list-other">
+            <li v-show="right.other.length === 0">无数据</li>
+            <li @click="otherItemEvent(m)" v-for="(m, n) in right.other" :key="n"><span class="title">{{m.name}} - [{{m.site}}]</span></li>
+          </ul>
         </div>
       </div>
     </transition>
@@ -113,7 +128,7 @@
 </template>
 <script>
 import { mapMutations } from 'vuex'
-import { star, history, setting, shortcut, mini, iptv } from '../lib/dexie'
+import { star, history, setting, shortcut, mini, iptv, sites } from '../lib/dexie'
 import zy from '../lib/site/tools'
 import Player from 'xgplayer'
 import Hls from 'xgplayer-hls.js'
@@ -170,6 +185,7 @@ export default {
       right: {
         show: false,
         type: '',
+        other: [],
         list: [],
         history: []
       },
@@ -202,7 +218,6 @@ export default {
       length: 0,
       timer: null,
       scroll: false,
-      showNext: false,
       isStar: false,
       isTop: false,
       mini: {},
@@ -288,6 +303,9 @@ export default {
   methods: {
     ...mapMutations(['SET_VIEW', 'SET_DETAIL', 'SET_VIDEO', 'SET_SHARE']),
     async getUrls () {
+      if (this.video.key === '') {
+        return false
+      }
       this.name = ''
       if (this.timer !== null) {
         clearInterval(this.timer)
@@ -302,8 +320,6 @@ export default {
         this.playUrl(this.video.iptv.url)
         this.name = this.video.iptv.name
         this.getIptvList()
-        const _hmt = window._hmt
-        _hmt.push(['_trackEvent', 'IPTV', 'play', this.name])
       } else {
         const index = this.video.info.index | 0
         let time = 0
@@ -323,7 +339,6 @@ export default {
     playVideo (index = 0, time = 0) {
       this.fetchM3u8List().then(m3u8Arr => {
         this.xg.src = m3u8Arr[index]
-        this.showNext = m3u8Arr.length > 1
 
         if (time !== 0) {
           this.xg.play()
@@ -350,12 +365,9 @@ export default {
         if (VIDEO_DETAIL_CACHE[cacheKey]) {
           this.name = VIDEO_DETAIL_CACHE[cacheKey].name
           resolve(VIDEO_DETAIL_CACHE[cacheKey].list)
-          return
         }
         zy.detail(this.video.key, this.video.info.id).then(res => {
           this.name = res.name
-          const _hmt = window._hmt
-          _hmt.push(['_trackEvent', 'film', 'play', res.name])
           const dd = res.dl.dd
           const type = Object.prototype.toString.call(dd)
           let m3u8Txt = []
@@ -720,6 +732,70 @@ export default {
         this.$message.warning('删除历史记录失败, 错误信息: ' + err)
       })
     },
+    getAllsitestest () {
+      this.name = '喜宝'
+      sites.all().then(res => {
+        const sites = res
+        const arr = []
+        for (const i of sites) {
+          zy.search(i.key, this.name).then(res => {
+            const type = Object.prototype.toString.call(res)
+            if (type === '[object Array]') {
+              res.forEach(element => {
+                zy.detail(i.key, element.id).then(detailRes => {
+                  arr.push(detailRes)
+                })
+              })
+            }
+            if (type === '[object Object]') {
+              zy.detail(i.key, res.id).then(detailRes => {
+                arr.push(detailRes)
+              })
+            }
+          })
+        }
+        console.log(arr, 'arr')
+      })
+    },
+    async getAllsites () {
+      const all = await sites.all()
+      this.right.other = []
+      for (const i of all) {
+        if (i.isActive) {
+          const searchRes = await zy.search(i.key, this.name)
+          const type = Object.prototype.toString.call(searchRes)
+          if (type === '[object Array]') {
+            searchRes.forEach(async element => {
+              const detailRes = await zy.detail(i.key, element.id)
+              detailRes.key = i.key
+              detailRes.site = i.name
+              this.right.other.push(detailRes)
+            })
+          }
+          if (type === '[object Object]') {
+            const detailRes = await zy.detail(i.key, searchRes.id)
+            detailRes.key = i.key
+            detailRes.site = i.name
+            this.right.other.push(detailRes)
+          }
+        }
+      }
+    },
+    otherEvent (m) {
+      this.right.type = 'other'
+      this.getAllsites()
+      this.right.show = true
+    },
+    async otherItemEvent (e) {
+      const db = await history.find({ site: e.key, ids: e.id })
+      if (db) {
+        this.video = { key: db.site, info: { id: db.ids, name: db.name, index: db.index, site: e.key } }
+      } else {
+        this.video = { key: e.key, info: { id: e.id, name: e.name, index: 0, site: e.key } }
+      }
+      this.right.show = false
+      this.right.type = ''
+    },
     mtEvent () {
       setting.find().then(res => {
         if (res.shortcut) {
@@ -1000,18 +1076,17 @@ export default {
       let timerID
       ev.forEach(item => {
         this.xg.root.addEventListener(item, () => {
-          if (!this.xg.fullscreen) {
-            return
+          if (this.xg && this.xg.fullscreen) {
+            const videoTitle = document.querySelector('.xg-view-videoTitle')
+            videoTitle.style.display = 'block'
+            clearTimeout(timerID)
+            timerID = setTimeout(() => {
+              // 播放中自动消失
+              if (this.xg && !this.xg.paused) {
+                videoTitle.style.display = 'none'
+              }
+            }, 3000)
           }
-          const videoTitle = document.querySelector('.xg-view-videoTitle')
-          videoTitle.style.display = 'block'
-          clearTimeout(timerID)
-          timerID = setTimeout(() => {
-            // 播放中自动消失
-            if (this.xg && !this.xg.paused) {
-              videoTitle.style.display = 'none'
-            }
-          }, 3000)
         })
       })
 
@@ -1023,13 +1098,15 @@ export default {
       if (this.xg.fullscreen) {
         this.xg.exitFullscreen()
       }
+      clearInterval(this.timer)
+      this.video.key = ''
       this.xg.src = ''
       this.config.src = ''
       this.xg.destroy(false)
       this.xg = null
       this.name = ''
       this.right.list = []
-      this.showNext = false
+      this.getAllhistory()
       setTimeout(() => {
         this.xg = new Hls(this.config)
         this.playerInstall()

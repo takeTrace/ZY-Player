@@ -193,6 +193,23 @@ const zy = {
         }
       })
     })
+  },
+  /**
+   * 检查资源
+   * @param {*} key 资源网 key
+   * @returns boolean
+   */
+  async check (key, id) {
+    try {
+      const cls = await this.class(key)
+      if (cls) {
+        return true
+      } else {
+        return false
+      }
+    } catch (e) {
+      return false
+    }
   }
 }
 
